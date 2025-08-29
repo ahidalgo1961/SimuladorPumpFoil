@@ -225,6 +225,20 @@ function buoyancy(p, h){
   const Lm = Math.max(0.8, p.boardLen);
   const y_anchor = h + p.mastH; // marco W (y=0 superficie)
   const phiDeg = p.show.phiFollow ? (p.phi0 - p.Kphi*(riderFM(p,t).Mr)) : p.phi0;
+
+  // DEBUG: Validar que no haya NaN en phiDeg
+  if (isNaN(phiDeg) || isNaN(p.phi0) || (p.show.phiFollow && (isNaN(p.Kphi) || isNaN(riderFM(p,t).Mr)))) {
+    console.error('NaN detectado en phiDeg (buoyancy):', {
+      phiDeg,
+      p_phi0: p.phi0,
+      p_Kphi: p.Kphi,
+      riderFM_Mr: riderFM(p,t).Mr,
+      phiFollow: p.show.phiFollow
+    });
+    // Usar valor por defecto si hay NaN
+    phiDeg = p.phi0 || 0;
+  }
+
   const phi = phiDeg*Math.PI/180;
   const tY=Math.sin(phi), nY=Math.cos(phi);
   const y1 = y_anchor - (Lm/2)*tY - (tb/2)*nY;
@@ -297,6 +311,7 @@ function draw(instOpt){
   S("alphaOut").textContent=fmt(inst.alpha,1);
   S("thetaEffOut").textContent=fmt(inst.theta_eff,1);
   S("LOut").textContent=fmt(inst.L,0);
+  S("LvOut").textContent=fmt(inst.L * Math.cos(inst.gamma * Math.PI/180), 0); // Componente vertical de L
   S("DOut").textContent=fmt(inst.D,0);
   S("ThOut").textContent=fmt(inst.Th,1);
   S("SupOut").textContent=fmt(inst.Sup,0);
@@ -375,6 +390,20 @@ function draw(instOpt){
 
   // φ efectivo
   const phiDeg = p.show.phiFollow ? (p.phi0 - p.Kphi*inst.Mr) : p.phi0;
+
+  // DEBUG: Validar que no haya NaN en phiDeg
+  if (isNaN(phiDeg) || isNaN(p.phi0) || (p.show.phiFollow && (isNaN(p.Kphi) || isNaN(inst.Mr)))) {
+    console.error('NaN detectado en phiDeg (draw):', {
+      phiDeg,
+      p_phi0: p.phi0,
+      p_Kphi: p.Kphi,
+      inst_Mr: inst.Mr,
+      phiFollow: p.show.phiFollow
+    });
+    // Usar valor por defecto si hay NaN
+    phiDeg = p.phi0 || 0;
+  }
+
   const phi = phiDeg*Math.PI/180;
 
   // Geometría tabla
@@ -415,6 +444,10 @@ function draw(instOpt){
     const bLen=Math.max(12, kpx*Math.max(0,inst.Fb));
     const fTip=[front[0]+fLen*nHat[0], front[1]+fLen*nHat[1]];
     const bTip=[back[0]+bLen*nHat[0],  back[1]+bLen*nHat[1]];
+// Antes de la llamada arrow2, añade:
+console.log('Debugging arrow2 params:');
+console.log('front:', front, 'ftip:',fTip[1]);
+    
     arrow2(front[0],front[1], fTip[0],fTip[1], '#c00', 2.0); // pie delantero
     arrow2(back[0], back[1],  bTip[0], bTip[1], '#06c', 2.0); // pie trasero
   }
@@ -471,14 +504,14 @@ function draw(instOpt){
 
   // Vectores flujo y cuerda
   if(p.show.chord){
-    const th=inst.theta_eff*Math.PI/180, Lc=100;
+    const th=phi, Lc=100; // Usar phi (ángulo de la tabla) para mantener paralelismo
     const cxa=cx-(Lc/2)*Math.cos(th), cya=cy-(Lc/2)*Math.sin(th);
     const cxb=cx+(Lc/2)*Math.cos(th), cyb=cy+(Lc/2)*Math.sin(th);
-    line(cxa,cya,cxb,cyb,'#000',4); text(cxb+6,cyb,'Cuerda (θ_eff)');
+    line(cxa,cya,cxb,cyb,'#000',4); text(cxb+6,cyb,'Cuerda (φ)');
   }
   if(p.show.flow){
-    const Lf=84, vx=Lf*Math.cos(inst.gamma*Math.PI/180), vy=Lf*Math.sin(inst.gamma*Math.PI/180);
-    line(cx - vx, cy - vy, cx, cy, '#000', 1.2); text(cx+6,cy,'V_rel (γ)');
+    const Lf=100, vx=Lf*Math.cos(inst.gamma*Math.PI/180), vy=Lf*Math.sin(inst.gamma*Math.PI/180);
+    arrow2((cx - vx) - 100, (cy - vy) + 50, cx - 100, cy + 50, '#000', 1.2); text((cx - 100)+6, (cy + 50),'V_rel (γ)');
   }
 
   // Vectores L/D
