@@ -1,9 +1,12 @@
-# Wing Foil — Simulador v23d
+# Wing Foil — Simulador v23h7
 - Layout clásico (sliders izq., KPI der., diagrama centro).
-- Superficie del agua (y=0) coherente con Arquímedes y con el recorte de parte sumergida.
-- Flechas visibles: Lift, Drag, **Peso**, **Arquímedes**, **Resultantes** (V/H) y fuerzas de **pies**.
-- Línea de flotación con **calado** mostrado en el dibujo.
-- Ejes **W** (global) y **B** (tabla).
-- Persistencia de sliders (localStorage).
+- Tooltips nativos en sliders (atributo title).
+- Slider **Δt (s)** del integrador.
+- **Escalas**: vertical `vscale` y horizontal `hscale`.
+- Flechas de **pies** (⊥ tabla, hacia ella).
+- **W(0,0)** global fijo; **B(0,0)** en **popa** (solidario a la tabla).
+- Recorte sumergido y **calado** coherente con Arquímedes.
+- Gráficos históricos (100 ciclos): **Ángulos** y **Fuerzas** con **unidades**.
 
-v23e: El origen (0,0) del sistema global W se mueve a la **proa** de la tabla. La línea de agua deja de mostrar (y=0) para evitar ambigüedad.
+
+v23h8: Restituidas leyendas: «Tabla Navegando», «Tabla Volando» y «Foil fuera del agua».
