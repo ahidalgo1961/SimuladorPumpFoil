@@ -92,96 +92,6 @@ function labelRefresh(p){
   S("dtv").textContent=p.dt.toFixed(3);
 }
 
-
-// ======== MODO FÍSICO (ODE) ========
-// Parámetros dinámicos básicos
-const dyn = {
-  Itheta: 2.0,   // kg·m²
-  cq: 4.0,       // N·m·s/rad
-  ktheta: 20.0,  // N·m/rad
-  Malpha: -8.0,  // N·m/rad (estabilizante con signo -)
-  cu: 5.0        // N·s/m (amort. horizontal)
-};
-
-// Estado continuo (global W): x,z,u,w,theta,q
-let X = { x:0, z:-0.20, u:3.5, w:0.0, theta: 3*Math.PI/180, q:0.0 };
-
-// Señales de pies (reutiliza riderFM)
-function feetForcesODE(p, t){
-  const fm = riderFM(p,t);  // {Ff,Fb,Mr}
-  return fm;
-}
-
-// Aerohidrodinámica desde velocidades
-function hydroFromState(p, st){
-  let {u,w,theta} = st;
-  const V = Math.hypot(u,w) || 1e-6;
-  const gamma = Math.atan2(w,u);           // rad
-  const alpha = theta - gamma;             // rad
-  // tu CL usa grados → convierto:
-  let CL = CL_from_alpha(alpha*180/Math.PI, p.clslope, p.clmax, p.astall);
-  if(st.z >= 0){ CL = 0; }                 // foil fuera del agua
-  const L = 0.5*p.rho*V*V*p.S*CL;
-  const D = L/Math.max(1e-6,p.LD);
-  const Lx = L*(-Math.sin(gamma)), Ly = L*( Math.cos(gamma));
-  const Dx = D*(-Math.cos(gamma)), Dy = D*(-Math.sin(gamma));
-  return {alpha, gamma, V, L, D, Lx, Ly, Dx, Dy};
-}
-
-// Empuje de Arquímedes (usa tu buoyancy existente con z=h)
-function buoyancyZ(p, z){
-  const B = buoyancy(p, z); // {Fb, draft,...}
-  return {Fb: B.Fb, draft: B.draft};
-}
-
-// Momento total de cabeceo
-function totalMoment(p, hydro, Mrider, theta, q){
-  const Mhyd = dyn.Malpha * (hydro.alpha);       // α en rad
-  return Mhyd + Mrider - dyn.cq*q - dyn.ktheta*(theta - 0);
-}
-
-// RHS: Xdot = f(t, X, p)
-function rhs(t, st, p){
-  const {Ff,Fb,Mr} = feetForcesODE(p,t);
-  const hydro = hydroFromState(p, st);
-  const buoy = buoyancyZ(p, st.z);
-
-  const Fx = hydro.Lx + hydro.Dx - dyn.cu*st.u;            // + Fwing_x si se quiere
-  const Fz = hydro.Ly + hydro.Dy + buoy.Fb - p.mass*9.81 - p.cw*st.w;
-
-  const M = totalMoment(p, hydro, Mr, st.theta, st.q);
-
-  const dx  = st.u;
-  const dz  = st.w;
-  const du  = Fx / p.mass;
-  const dw  = Fz / p.mass;
-  const dth = st.q;
-  const dq  = M  / dyn.Itheta;
-
-  return { dx, dz, du, dw, dth, dq,
-           out: { alpha:hydro.alpha*180/Math.PI, gamma:hydro.gamma*180/Math.PI, L:hydro.L, D:hydro.D,
-                  Th: hydro.Lx + hydro.Dx, Vert: hydro.Ly + hydro.Dy, Fb: buoy.Fb, Mr } };
-}
-
-// Integrador clásico RK4
-function rk4Step(st, dt, p, t){
-  function add(a,k,s){ return { x:a.x+s*k.dx*dt, z:a.z+s*k.dz*dt, u:a.u+s*k.du*dt, w:a.w+s*k.dw*dt, theta:a.theta+s*k.dth*dt, q:a.q+s*k.dq*dt }; }
-  const k1 = rhs(t, st, p);
-  const k2 = rhs(t+dt/2, add(st,k1,0.5), p);
-  const k3 = rhs(t+dt/2, add(st,k2,0.5), p);
-  const k4 = rhs(t+dt,   add(st,k3,1.0), p);
-  const xn = {
-    x: st.x + dt*(k1.dx + 2*k2.dx + 2*k3.dx + k4.dx)/6,
-    z: st.z + dt*(k1.dz + 2*k2.dz + 2*k3.dz + k4.dz)/6,
-    u: st.u + dt*(k1.du + 2*k2.du + 2*k3.du + k4.du)/6,
-    w: st.w + dt*(k1.dw + 2*k2.dw + 2*k3.dw + k4.dw)/6,
-    theta: st.theta + dt*(k1.dth + 2*k2.dth + 2*k3.dth + k4.dth)/6,
-    q: st.q + dt*(k1.dq + 2*k2.dq + 2*k3.dq + k4.dq)/6
-  };
-  // exportar observables (del último paso)
-  xn._out = k4.out;
-  return xn;
-}
 // señales de pies (senos recortados a positivo; empujan hacia la tabla)
 function riderFM(p,t){
   const W=p.mass*9.81; const w=2*Math.PI*p.freq;
@@ -247,46 +157,21 @@ function resetState(){ const p=P(); h=p.h0; wv=0; t=0; cyc_acc={na:0,a:0,th:0,L:
 function startPlay(){ if(playing) return; playing=setInterval(()=> step(+1), 30); }
 function stopPlay(){ if(playing){ clearInterval(playing); playing=null; } }
 
-
 function step(dir){
   const p=P(); T=1/Math.max(0.01,p.freq);
   const dt=Math.max(0.0005, +p.dt||T/240);
   const old_t=t;
-  t=(t+dir*dt);
-  // wrap for history cycle detection
-  let crossed = false;
-  if(dir>0 && (old_t%T) > (t%T)) crossed = true;
-  if(dir<0 && (old_t%T) < (t%T)) crossed = true;
-
-  let ins;
-  if(document.getElementById('useODE') && document.getElementById('useODE').checked){
-    // Integrar ODE
-    const sign = (dir>=0)? 1 : -1;
-    X = rk4Step(X, sign*dt, p, t);
-    h = X.z;  // usar z como heave para el dibujo (m)
-    ins = { alpha:X._out.alpha, gamma:X._out.gamma, L:X._out.L, D:X._out.D,
-            Th:X._out.Th, Vert:X._out.Vert,
-            Sup: ((X._out.Vert + buoyancy(p,h).Fb) / (p.mass*9.81))*100,
-            theta_eff: X.theta*180/Math.PI, Mr:X._out.Mr };
-  } else {
-    // modo anterior (prescrito)
-    const ins0 = instant(p, (t%T+T)%T);
-    // mantener integrador vertical existente si lo tienes (h, wv)
-    const B=buoyancy(p,h); const mg=p.mass*9.81; const acc=(ins0.Vert+B.Fb-mg-p.cw*wv)/p.mass;
-    wv += acc*dt; h += wv*dt;
-    ins = ins0;
-  }
-
-  S('tVal').textContent=((t%T+T)%T).toFixed(2);
-
-  // histórico acumulado (sólo cuando avanzamos)
+  t=(t+dir*dt)%T; if(t<0) t+=T;
+  const ins=instant(p,t); const B=buoyancy(p,h);
+  const mg=p.mass*9.81; const acc=(ins.Vert+B.Fb-mg-p.cw*wv)/p.mass;
+  wv += acc*dt; h += wv*dt;
+  S('tVal').textContent=t.toFixed(2);
   if(dir>0){
     cyc_acc.na++; cyc_acc.a+=ins.alpha; cyc_acc.th+=ins.theta_eff; cyc_acc.L+=ins.L; cyc_acc.Th+=ins.Th;
-    if(crossed) endCyclePush();
+    if(t<old_t) endCyclePush();
   }
   draw(ins);
 }
-
 
 function draw(instOpt){
   const p=P(); labelRefresh(p);
