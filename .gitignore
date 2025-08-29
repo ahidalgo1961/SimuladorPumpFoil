@@ -1,0 +1,12 @@
+
+# Archivos zip (backups)
+*.zip
+
+# Archivos versionados (mantener solo el actual)
+*_v[0-9]*.html
+*_v[0-9]*.js
+*_v[0-9]*/
+
+# Node modules
+node_modules/
+

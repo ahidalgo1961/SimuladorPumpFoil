@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>Prueba Live Server JS</title>
+<meta http-equiv="Cache-Control" content="no-store" />
+<style>
+ body{font-family:system-ui;margin:20px;background:#f5f7fa}
+ #status{padding:12px;border:2px solid #06c;background:#e8f3ff;border-radius:8px;font-size:14px}
+ code{background:#eee;padding:2px 4px;border-radius:4px}
+</style>
+</head>
+<body>
+<h1>Test Live Server</h1>
+<div id="status">Cargando script…</div>
+<ul>
+ <li>Si ves este texto cambiando cada segundo, JS funciona.</li>
+ <li>Abre la consola (Edge: Ctrl+Shift+I > pestaña Console) y busca logs.</li>
+ <li>Si esto funciona pero tu simulador no, el problema está dentro de <code>wingfoil_sim.html</code>.</li>
+</ul>
+<script>
+console.log('[TEST] Script principal ejecutándose');
+const st=document.getElementById('status');
+let n=0;
+function tick(){ n++; st.textContent='JS OK - contador '+n+' - '+new Date().toLocaleTimeString(); }
+setInterval(tick,1000);
+// Diagnóstico rápido
+st.insertAdjacentHTML('beforeend','<br>Scripts en página: '+document.scripts.length);
+</script>
+</body>
+</html>
