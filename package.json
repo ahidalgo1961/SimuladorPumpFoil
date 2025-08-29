@@ -1,0 +1,13 @@
+{
+  "name": "wingfoil-simulador",
+  "version": "1.0.0",
+  "description": "Simulador Wing Foil con persistencia en disco de sliders (estado)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
