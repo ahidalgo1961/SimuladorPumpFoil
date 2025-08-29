@@ -18,9 +18,9 @@
     label{font-size:10px;color:#444;line-height:1.0}
     input[type=range]{width:120px;height:6px}
     input[type=range]::-webkit-slider-runnable-track{height:4px}
-    input[type=range]::-webkit-slider-thumb{height:8px;width:8px;margin-top:-2px;-webkit-appearance:none;border-radius:50%;background:#666}
+    input[type=range]::-webkit-slider-thumb{height:6px;width:6px;margin-top:-1px;-webkit-appearance:none;border-radius:0;background:#666;clip-path:polygon(50% 0%,0% 100%,100% 100%)}
     input[type=range]::-moz-range-track{height:4px}
-    input[type=range]::-moz-range-thumb{height:8px;width:8px;border:none;border-radius:50%;background:#666}
+    input[type=range]::-moz-range-thumb{height:6px;width:6px;border:none;border-radius:0;background:#666;clip-path:polygon(50% 0%,0% 100%,100% 100%)}
     select{padding:2px 6px;font-size:10px}
     .diagram{height:58vh; min-height:380px; border:1px solid #eee;border-radius:8px}
     svg{width:100%;height:100%}
@@ -98,12 +98,13 @@
       <label><input id="showFlow" type="checkbox" checked> Mostrar vector de flujo (γ)</label>
       <label><input id="showChord" type="checkbox" checked> Mostrar cuerda (θ_eff)</label>
       <label><input id="showLD" type="checkbox" checked> Mostrar vectores L/D</label>
+      <label><input id="showTableVel" type="checkbox" checked> Mostrar velocidad tabla</label>
       <label><input id="showAxesW" type="checkbox" checked> Ejes globales W</label>
       <label><input id="showAxesB" type="checkbox" checked> Ejes en tabla B</label>
       <label><input id="showWeight" type="checkbox" checked> Mostrar peso (mg)</label>
       <label><input id="showBuoy" type="checkbox" checked> Mostrar Arquímedes</label>
       <label><input id="showResultants" type="checkbox" checked> Mostrar resultantes</label>
-<label><input id="useODE" type="checkbox"> Modo físico (ODE)</label>
+<label><input id="useODE" type="checkbox" checked> Modo físico (ODE) - RECOMENDADO</label>
     </div>
   </div>
 
@@ -112,8 +113,7 @@
     <div class="diagram"><svg id="geom"></svg></div>
     <div class="controls">
       <button class="btn" id="back">&#9664;&#9664; Step</button>
-      <button class="btn" id="play">▶ Play</button>
-      <button class="btn" id="pause">⏸ Pause</button>
+      <button class="btn" id="playPause">▶ Play</button>
       <button class="btn" id="fwd">Step &#9654;&#9654;</button>
       <span>t = <b id="tVal">0.00</b> s</span>
       <span>| Pan:</span>
@@ -133,11 +133,13 @@
       <div class="kpi"><div class="h">θ_eff (°)</div><div class="v" id="thetaEffOut">—</div></div>
       <div class="kpi"><div class="h">L (N)</div><div class="v" id="LOut" style="color:#2e7d32">—</div></div>
       <div class="kpi"><div class="h">L vertical (N)</div><div class="v" id="LvOut" style="color:#2e7d32">—</div></div>
+      <div class="kpi"><div class="h">F_rider vert. (N)</div><div class="v" id="FrOut" style="color:#c00">—</div></div>
       <div class="kpi"><div class="h">D (N)</div><div class="v" id="DOut">—</div></div>
       <div class="kpi"><div class="h">Empuje (N)</div><div class="v" id="ThOut">—</div></div>
       <div class="kpi"><div class="h">% soporte</div><div class="v" id="SupOut">—</div></div>
       <div class="kpi"><div class="h">M_rider (N·m)</div><div class="v" id="MrOut">—</div></div>
       <div class="kpi"><div class="h">h<sub>CoP</sub> (m)</div><div class="v" id="hOut">—</div></div>
+      <div class="kpi"><div class="h">V_tabla (m/s)</div><div class="v" id="VTableOut" style="color:#0066cc">—</div></div>
       <div class="kpi"><div class="h">Empuje Arq. (N)</div><div class="v" id="BOut">—</div></div>
       <div class="kpi"><div class="h">Calado tabla (m)</div><div class="v" id="draftOut">—</div></div>
     </div>

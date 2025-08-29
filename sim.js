@@ -13,21 +13,22 @@ let h=0, wv=0;        // heave (m, +arriba) y velocidad vertical
 let pan={x:0,y:0};
 
 // Histórico (últimos 100 ciclos: medias por ciclo)
-let cyc_acc = {na:0, a:0, th:0, L:0, Th:0};
+let cyc_acc = {na:0, a:0, th:0, L:0, Th:0, Fr:0};
 const MAXC=100;
 const histAngles={alpha:[], theta:[]};
-const histForces={L:[], Th:[]};
+const histForces={L:[], Th:[], Fr:[]};
 
 function endCyclePush(){
   if(cyc_acc.na>0){
     const a=cyc_acc.a/cyc_acc.na, th=cyc_acc.th/cyc_acc.na;
-    const Lm=cyc_acc.L/cyc_acc.na, Thm=cyc_acc.Th/cyc_acc.na;
+    const Lm=cyc_acc.L/cyc_acc.na, Thm=cyc_acc.Th/cyc_acc.na, Frm=cyc_acc.Fr/cyc_acc.na;
     histAngles.alpha.push(a); histAngles.theta.push(th);
-    histForces.L.push(Lm); histForces.Th.push(Thm);
+    histForces.L.push(Lm); histForces.Th.push(Thm); histForces.Fr.push(Frm);
     if(histAngles.alpha.length>MAXC){ histAngles.alpha.shift(); histAngles.theta.shift(); }
-    if(histForces.L.length>MAXC){ histForces.L.shift(); histForces.Th.shift(); }
+    if(histForces.L.length>MAXC){ histForces.L.shift(); histForces.Th.shift(); histForces.Fr.shift(); }
   }
-  cyc_acc={na:0, a:0, th:0, L:0, Th:0};
+  // No agregar valores por defecto cuando no hay datos - dejar arrays vacíos
+  cyc_acc={na:0, a:0, th:0, L:0, Th:0, Fr:0};
 }
 
 function bindUI(){
@@ -42,10 +43,9 @@ function bindUI(){
     }, {passive:true});
     try{ const obj=JSON.parse(localStorage.getItem(KEY)||'{}'); if(obj[id]!==undefined) el.value=obj[id]; }catch(e){}
   });
-  ["showHorizon","showFeet","showArc","showLabels","phiFollow","showFlow","showChord","showLD","showAxesW","showAxesB","showWeight","showBuoy","showResultants"]
+  ["showHorizon","showFeet","showArc","showLabels","phiFollow","showFlow","showChord","showLD","showTableVel","showAxesW","showAxesB","showWeight","showBuoy","showResultants"]
     .forEach(id=> S(id).addEventListener('change', draw, {passive:true}));
-  S('play').addEventListener('click', startPlay);
-  S('pause').addEventListener('click', stopPlay);
+  S('playPause').addEventListener('click', togglePlayPause);
   S('fwd').addEventListener('click', ()=> step(+1));
   S('back').addEventListener('click', ()=> step(-1));
   S('panL').addEventListener('click', ()=>{ pan.x -= 18; draw(); });
@@ -54,6 +54,13 @@ function bindUI(){
   S('panD').addEventListener('click', ()=>{ pan.y += 18; draw(); });
   S('pan0').addEventListener('click', ()=>{ pan={x:0,y:0}; draw(); });
   S('state0').addEventListener('click', resetState);
+  
+  // Inicializar el estado del botón Play/Pause
+  const playPauseButton = S('playPause');
+  if(playPauseButton){
+    playPauseButton.textContent = '▶ Play';
+    playPauseButton.innerHTML = '▶ Play';
+  }
 }
 
 function P(){
@@ -67,7 +74,7 @@ function P(){
     phaseF:+S("phaseF").value, phaseB:+S("phaseB").value, Gtheta:+S("Gtheta").value, Kphi:+S("Kphi").value,
     h0:+S("h0").value, cw:+S("cw").value, vscale:+S("vscale").value, hscale:+S("hscale").value, vecscale:+S("vecscale").value,
     boardVolL:+S("boardVolL").value, boardArea:+S("boardArea").value, mastH:+S("mastH").value, boardLen:+S("boardLen").value,
-    show:{ horizon:S("showHorizon").checked, feet:S("showFeet").checked, arc:S("showArc").checked, labels:S("showLabels").checked, flow:S("showFlow").checked, chord:S("showChord").checked, LD:S("showLD").checked, phiFollow:S("phiFollow").checked, axesW:S("showAxesW").checked, axesB:S("showAxesB").checked, weight:S("showWeight").checked, buoy:S("showBuoy").checked, result:S("showResultants").checked }
+    show:{ horizon:S("showHorizon").checked, feet:S("showFeet").checked, arc:S("showArc").checked, labels:S("showLabels").checked, flow:S("showFlow").checked, chord:S("showChord").checked, LD:S("showLD").checked, tableVel:S("showTableVel").checked, phiFollow:S("phiFollow").checked, axesW:S("showAxesW").checked, axesB:S("showAxesB").checked, weight:S("showWeight").checked, buoy:S("showBuoy").checked, result:S("showResultants").checked }
   };
 }
 
@@ -93,8 +100,10 @@ function labelRefresh(p){
 }
 
 
-// ======== MODO FÍSICO (ODE) ========
-// Parámetros dinámicos básicos
+// ======== MODO FÍSICO (ODE) - RECOMENDADO ========
+// ✅ Este es el modo principal y recomendado para simulaciones físicas.
+// Calcula la dinámica real del sistema usando integración numérica de EDOs.
+// Considera velocidades, aceleraciones y estado completo del sistema.
 const dyn = {
   Itheta: 2.0,   // kg·m²
   cq: 4.0,       // N·m·s/rad
@@ -104,6 +113,8 @@ const dyn = {
 };
 
 // Estado continuo (global W): x,z,u,w,theta,q
+// ✅ Variables de estado físicas: posiciones, velocidades, ángulo y velocidad angular
+// Esto permite calcular aceleraciones y dinámica real (a diferencia del modo deprecated)
 let X = { x:0, z:-0.20, u:3.5, w:0.0, theta: 3*Math.PI/180, q:0.0 };
 
 // Señales de pies (reutiliza riderFM)
@@ -201,6 +212,10 @@ function CL_from_alpha(a, slope, clmax, astall){
   return CL;
 }
 
+// ========== FUNCIÓN DEPRECATED ==========
+// ⚠️  DEPRECATED: instant() solo se usa en modo prescrito (deprecated)
+// Esta función calcula fuerzas aerodinámicas con velocidad prescrita,
+// ignorando la dinámica real del sistema. Use hydroFromState() en modo ODE.
 function instant(p,t){
   const {Ff,Fb,Mr}=riderFM(p,t);
   const theta_eff = p.theta0 - p.Gtheta*Mr;
@@ -214,7 +229,7 @@ function instant(p,t){
   const Lx=L*Math.cos((gamma+90)*Math.PI/180), Ly=L*Math.sin((gamma+90)*Math.PI/180);
   const Dx=D*Math.cos((gamma+180)*Math.PI/180), Dy=D*Math.sin((gamma+180)*Math.PI/180);
   const Th=Lx+Dx, Vert=Ly+Dy, Sup=(Vert/(p.mass*9.81))*100;
-  return {Ff,Fb,Mr,theta_eff,gamma,alpha,L,D,Th,Vert,Sup};
+  return {Ff,Fb,Mr,theta_eff,gamma,alpha,V,L,D,Th,Vert,Sup};
 }
 
 // Arquímedes / calado (rectángulo)
@@ -257,9 +272,45 @@ function buoyancy(p, h){
   return {Fb, draft, tb, y_anchor, phiDeg};
 }
 
-function resetState(){ const p=P(); h=p.h0; wv=0; t=0; cyc_acc={na:0,a:0,th:0,L:0,Th:0}; draw(); }
-function startPlay(){ if(playing) return; playing=setInterval(()=> step(+1), 30); }
-function stopPlay(){ if(playing){ clearInterval(playing); playing=null; } }
+function resetState(){ const p=P(); h=p.h0; wv=0; t=0; cyc_acc={na:0,a:0,th:0,L:0,Th:0,Fr:0}; draw(); }
+
+function togglePlayPause(){
+  const button = S('playPause');
+  if(playing){
+    // Está reproduciendo, pausar
+    stopPlay();
+    button.textContent = '▶ Play';
+    button.innerHTML = '▶ Play';
+  } else {
+    // Está pausado, reproducir
+    startPlay();
+    button.textContent = '⏸ Pause';
+    button.innerHTML = '⏸ Pause';
+  }
+}
+
+function startPlay(){
+  if(playing) return;
+  playing=setInterval(()=> step(+1), 30);
+  // Actualizar el texto del botón cuando se inicia automáticamente
+  const button = S('playPause');
+  if(button){
+    button.textContent = '⏸ Pause';
+    button.innerHTML = '⏸ Pause';
+  }
+}
+function stopPlay(){
+  if(playing){
+    clearInterval(playing);
+    playing=null;
+    // Actualizar el texto del botón cuando se pausa automáticamente
+    const button = S('playPause');
+    if(button){
+      button.textContent = '▶ Play';
+      button.innerHTML = '▶ Play';
+    }
+  }
+}
 
 
 function step(dir){
@@ -278,12 +329,21 @@ function step(dir){
     const sign = (dir>=0)? 1 : -1;
     X = rk4Step(X, sign*dt, p, t);
     h = X.z;  // usar z como heave para el dibujo (m)
+    wv = X.w; // actualizar velocidad vertical global para consistencia
+    
+    // Obtener fuerzas del rider para el modo ODE
+    const {Ff, Fb} = feetForcesODE(p, t);
+    
     ins = { alpha:X._out.alpha, gamma:X._out.gamma, L:X._out.L, D:X._out.D,
-            Th:X._out.Th, Vert:X._out.Vert,
+            Th:X._out.Th, Vert:X._out.Vert, V:X.u, Ff, Fb,
             Sup: ((X._out.Vert + buoyancy(p,h).Fb) / (p.mass*9.81))*100,
             theta_eff: X.theta*180/Math.PI, Mr:X._out.Mr };
   } else {
-    // modo anterior (prescrito)
+    // ========== MODO PRESCRITO (DEPRECATED) ==========
+    // ⚠️  DEPRECATED: Este modo usa velocidad prescrita y no considera
+    // la dinámica real del sistema. Use el modo ODE para simulaciones físicas.
+    // El modo prescrito será removido en futuras versiones.
+    console.warn('⚠️ Modo prescrito (no ODE) está deprecated. Use el modo físico (ODE) para mejores resultados.');
     const ins0 = instant(p, (t%T+T)%T);
     // mantener integrador vertical existente si lo tienes (h, wv)
     const B=buoyancy(p,h); const mg=p.mass*9.81; const acc=(ins0.Vert+B.Fb-mg-p.cw*wv)/p.mass;
@@ -295,7 +355,7 @@ function step(dir){
 
   // histórico acumulado (sólo cuando avanzamos)
   if(dir>0){
-    cyc_acc.na++; cyc_acc.a+=ins.alpha; cyc_acc.th+=ins.theta_eff; cyc_acc.L+=ins.L; cyc_acc.Th+=ins.Th;
+    cyc_acc.na++; cyc_acc.a+=ins.alpha; cyc_acc.th+=ins.theta_eff; cyc_acc.L+=ins.L; cyc_acc.Th+=ins.Th; cyc_acc.Fr+=((ins.Ff || 0) + (ins.Fb || 0));
     if(crossed) endCyclePush();
   }
   draw(ins);
@@ -304,6 +364,7 @@ function step(dir){
 
 function draw(instOpt){
   const p=P(); labelRefresh(p);
+  // ⚠️  Si no hay instOpt, usa instant() (deprecated). Preferir modo ODE.
   const inst = instOpt || instant(p,t);
   const B = buoyancy(p,h);
 
@@ -312,6 +373,7 @@ function draw(instOpt){
   S("thetaEffOut").textContent=fmt(inst.theta_eff,1);
   S("LOut").textContent=fmt(inst.L,0);
   S("LvOut").textContent=fmt(inst.L * Math.cos(inst.gamma * Math.PI/180), 0); // Componente vertical de L
+  S("FrOut").textContent=fmt((inst.Ff || 0) + (inst.Fb || 0), 0); // Fuerza vertical total del rider
   S("DOut").textContent=fmt(inst.D,0);
   S("ThOut").textContent=fmt(inst.Th,1);
   S("SupOut").textContent=fmt(inst.Sup,0);
@@ -319,6 +381,7 @@ function draw(instOpt){
   S("hOut").textContent=h.toFixed(3);
   S("BOut").textContent=Math.round(B.Fb).toString();
   S("draftOut").textContent=B.draft.toFixed(3);
+  S("VTableOut").textContent=fmt(Math.sqrt(inst.V*inst.V + wv*wv), 2); // Velocidad total de la tabla
 
   const svg=S("geom"); svg.innerHTML="";
   const wpx=svg.clientWidth||600, hpx=svg.clientHeight||420;
@@ -520,10 +583,37 @@ console.log('front:', front, 'ftip:',fTip[1]);
     const Llen = Math.max(12, kpx*Math.max(0,inst.L));
     const Dlen = Math.max(12, kpx*Math.max(0,inst.D));
     const g = inst.gamma*Math.PI/180;
-    const lhat = [Math.cos(g+Math.PI/2), Math.sin(g+Math.PI/2)];
+    const lhat = [Math.cos(g-Math.PI/2), Math.sin(g-Math.PI/2)];  // ← Corregido: -90° en lugar de +90°
     const dhat = [Math.cos(g+Math.PI),   Math.sin(g+Math.PI)  ];
     arrow2(cx, cy, cx + Llen*lhat[0], cy + Llen*lhat[1], '#2e7d32', 2.5);
     arrow2(cx, cy, cx + Dlen*dhat[0], cy + Dlen*dhat[1], '#ad8b00', 2.5);
+  }
+
+  // Vector velocidad de la tabla (en la proa)
+  if(p.show.tableVel){
+    const mid=[(p1[0]+p3[0])/2,(p1[1]+p3[1])/2];
+    const pixStance = Math.min(0.9*Lb, Math.max(10, p.d*(p.hscale||110)));
+    const bow=[mid[0]+(pixStance/2)*tHat[0], mid[1]+(pixStance/2)*tHat[1]]; // Proa
+    const kpx = (40/(p.mass*9.81)) * (p.vecscale||1);
+    
+    // Verificar si inst.V es válido
+    if (isNaN(inst.V) || inst.V === undefined) {
+      console.warn('inst.V is invalid:', inst.V);
+      return;
+    }
+    
+    const Vx = kpx * inst.V; // Componente horizontal
+    const Vy = kpx * wv;     // Componente vertical (wv se actualiza en ambos modos)
+    
+    // Asegurar que el vector tenga una longitud mínima visible
+    const minLength = 10;
+    const currentLength = Math.sqrt(Vx*Vx + Vy*Vy);
+    const scaleFactor = currentLength < minLength && currentLength > 0 ? minLength / currentLength : 1;
+    const finalVx = Vx * scaleFactor;
+    const finalVy = Vy * scaleFactor;
+    
+    arrow2(bow[0], bow[1], bow[0] + finalVx, bow[1] + finalVy, '#0066cc', 2.5);
+    text(bow[0] + finalVx + 6, bow[1] + finalVy, 'V_tabla');
   }
 
   // Peso, Arquímedes, Resultantes
@@ -553,7 +643,7 @@ function drawSeries(svgId, series, colors, ylabel){
   const W = w-pad.l-pad.r, H = h-pad.t-pad.b;
   function line(x1,y1,x2,y2,st='#000',w2=1){const L=document.createElementNS('http://www.w3.org/2000/svg','line'); L.setAttribute('x1',x1);L.setAttribute('y1',y1);L.setAttribute('x2',x2);L.setAttribute('y2',y2); L.setAttribute('stroke',st);L.setAttribute('stroke-width',w2); svg.appendChild(L);}
   function text(x,y,t,fs=10,st='#444'){const T=document.createElementNS('http://www.w3.org/2000/svg','text');T.setAttribute('x',x);T.setAttribute('y',y);T.setAttribute('font-size',fs);T.setAttribute('fill',st);T.textContent=t;svg.appendChild(T);}
-  const all=[]; series.forEach(arr=>all.push(...arr)); if(all.length===0){ text(8,20,ylabel,10); return; }
+  const all=[]; series.forEach(arr=>all.push(...arr.filter(v=>!isNaN(v)))); if(all.length===0){ text(8,20,ylabel,10); return; }
   const minv = Math.min(...all,0), maxv = Math.max(...all,0);
   const span = (maxv-minv)||1;
   // ejes
@@ -564,6 +654,9 @@ function drawSeries(svgId, series, colors, ylabel){
   series.forEach((arr, idx)=>{
     const color = colors[idx];
     for(let i=1;i<arr.length;i++){
+      // Saltar si alguno de los valores es NaN
+      if(isNaN(arr[i-1]) || isNaN(arr[i])) continue;
+      
       const x1 = pad.l + (W*(i-1))/(N-1);
       const x2 = pad.l + (W*(i))/(N-1);
       const y1 = pad.t + H*(1-(arr[i-1]-minv)/span);
@@ -575,7 +668,7 @@ function drawSeries(svgId, series, colors, ylabel){
 
 function refreshCharts(){
   drawSeries('chartAngles', [histAngles.alpha, histAngles.theta], ['#7b1fa2','#ef6c00'], 'Ángulos α, θ_eff [°] (ciclo)');
-  drawSeries('chartForces', [histForces.L, histForces.Th], ['#2e7d32','#ad1457'], 'Fuerzas L, Th [N] (ciclo)');
+  drawSeries('chartForces', [histForces.L, histForces.Th, histForces.Fr], ['#2e7d32','#ad1457','#c00'], 'Fuerzas L, Th, F_rider [N] (ciclo)');
 }
 
 function updateAll(){ draw(); }
