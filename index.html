@@ -85,6 +85,30 @@
         </div>
       </div>
       <div class="row">
+        <label title="Área de la cola S_tail (m²). Área proyectada de la cola del foil. Afecta la estabilidad y control.">S_tail (m²) <b id="tailAreav"></b></label>
+        <div class="slider-container">
+          <input type="number" class="scale-input" step="0.005" value="0.01" title="Límite mínimo" id="tailAreaMin">
+          <input id="tailArea" type="range" min="0.01" max="0.05" step="0.005" value="0.025">
+          <input type="number" class="scale-input" step="0.005" value="0.05" title="Límite máximo" id="tailAreaMax">
+        </div>
+      </div>
+      <div class="row">
+        <label title="Longitud de la cola L_tail (m). Distancia desde el centro del foil hasta el centro de la cola.">L_tail (m) <b id="tailLengthv"></b></label>
+        <div class="slider-container">
+          <input type="number" class="scale-input" step="0.05" value="0.3" title="Límite mínimo" id="tailLengthMin">
+          <input id="tailLength" type="range" min="0.3" max="1.0" step="0.05" value="0.6">
+          <input type="number" class="scale-input" step="0.05" value="1.0" title="Límite máximo" id="tailLengthMax">
+        </div>
+      </div>
+      <div class="row">
+        <label title="Incidencia de la cola i_tail (°). Ángulo de incidencia de la cola respecto al ala principal. Positivo aumenta estabilidad.">i_tail (°) <b id="tailIncidencev"></b></label>
+        <div class="slider-container">
+          <input type="number" class="scale-input" step="0.5" value="-5" title="Límite mínimo" id="tailIncidenceMin">
+          <input id="tailIncidence" type="range" min="-5" max="5" step="0.5" value="0">
+          <input type="number" class="scale-input" step="0.5" value="5" title="Límite máximo" id="tailIncidenceMax">
+        </div>
+      </div>
+      <div class="row">
         <label title="Densidad del agua ρ (kg/m³). Densidad del fluido (agua). Afecta la sustentación y resistencia hidrodinámica.">ρ (kg/m³) <b id="rhov"></b></label>
         <div class="slider-container">
           <input type="number" class="scale-input" step="1" value="950" title="Límite mínimo" id="rhoMin">
@@ -279,9 +303,9 @@
       <div class="row">
         <label title="Escala vertical (px/m). Factor de escala para la dimensión vertical en el diagrama (píxeles por metro).">escala vertical (px/m) <b id="vscalev"></b></label>
         <div class="slider-container">
-          <input type="number" class="scale-input" step="20" value="200" title="Límite mínimo" id="vscaleMin">
-          <input id="vscale" type="range" step="20" value="600">
-          <input type="number" class="scale-input" step="20" value="2000" title="Límite máximo" id="vscaleMax">
+          <input type="number" class="scale-input" step="1" value="200" title="Límite mínimo" id="vscaleMin">
+          <input id="vscale" type="range" step="1" value="600" min="200" max="2000">
+          <input type="number" class="scale-input" step="1" value="2000" title="Límite máximo" id="vscaleMax">
         </div>
       </div>
       <div class="row">
@@ -346,6 +370,58 @@
       </div>
     </div>
 
+    <h1>Geometría del Sistema</h1>
+    <div class="section">
+      <div class="row">
+        <label title="Offset horizontal del foil (m). Distancia horizontal desde el centro de la tabla hasta el centro del foil.">Offset X foil (m) <b id="foilOffsetXv"></b></label>
+        <div class="slider-container">
+          <input type="number" class="scale-input" step="0.01" value="0.20" title="Límite mínimo" id="foilOffsetXMin">
+          <input id="foilOffsetX" type="range" min="0.20" max="0.50" step="0.01" value="0.30">
+          <input type="number" class="scale-input" step="0.01" value="0.50" title="Límite máximo" id="foilOffsetXMax">
+        </div>
+      </div>
+      <div class="row">
+        <label title="Offset vertical del foil (m). Altura del centro del foil sobre la tabla.">Offset Z foil (m) <b id="foilOffsetZv"></b></label>
+        <div class="slider-container">
+          <input type="number" class="scale-input" step="0.005" value="0.02" title="Límite mínimo" id="foilOffsetZMin">
+          <input id="foilOffsetZ" type="range" min="0.02" max="0.10" step="0.005" value="0.05">
+          <input type="number" class="scale-input" step="0.005" value="0.10" title="Límite máximo" id="foilOffsetZMax">
+        </div>
+      </div>
+      <div class="row">
+        <label title="Offset horizontal de la cola (m). Distancia horizontal desde el foil hasta el centro de la cola.">Offset X cola (m) <b id="tailOffsetXv"></b></label>
+        <div class="slider-container">
+          <input type="number" class="scale-input" step="0.01" value="0.40" title="Límite mínimo" id="tailOffsetXMin">
+          <input id="tailOffsetX" type="range" min="0.40" max="0.80" step="0.01" value="0.60">
+          <input type="number" class="scale-input" step="0.01" value="0.80" title="Límite máximo" id="tailOffsetXMax">
+        </div>
+      </div>
+      <div class="row">
+        <label title="Offset vertical de la cola (m). Altura relativa del centro de la cola respecto al foil.">Offset Z cola (m) <b id="tailOffsetZv"></b></label>
+        <div class="slider-container">
+          <input type="number" class="scale-input" step="0.005" value="0.00" title="Límite mínimo" id="tailOffsetZMin">
+          <input id="tailOffsetZ" type="range" min="0.00" max="0.05" step="0.005" value="0.02">
+          <input type="number" class="scale-input" step="0.005" value="0.05" title="Límite máximo" id="tailOffsetZMax">
+        </div>
+      </div>
+      <div class="row">
+        <label title="Cuerda del foil (m). Longitud de la cuerda del perfil del foil.">Cuerda foil (m) <b id="foilChordv"></b></label>
+        <div class="slider-container">
+          <input type="number" class="scale-input" step="0.01" value="0.15" title="Límite mínimo" id="foilChordMin">
+          <input id="foilChord" type="range" min="0.15" max="0.35" step="0.01" value="0.25">
+          <input type="number" class="scale-input" step="0.01" value="0.35" title="Límite máximo" id="foilChordMax">
+        </div>
+      </div>
+      <div class="row">
+        <label title="Cuerda de la cola (m). Longitud de la cuerda del perfil de la cola.">Cuerda cola (m) <b id="tailChordv"></b></label>
+        <div class="slider-container">
+          <input type="number" class="scale-input" step="0.01" value="0.10" title="Límite mínimo" id="tailChordMin">
+          <input id="tailChord" type="range" min="0.10" max="0.20" step="0.01" value="0.15">
+          <input type="number" class="scale-input" step="0.01" value="0.20" title="Límite máximo" id="tailChordMax">
+        </div>
+      </div>
+    </div>
+
 
   </div>
 
@@ -355,6 +431,7 @@
     <div class="controls">
       <button class="btn" id="back">&#9664;&#9664; Step</button>
       <button class="btn" id="playPause">▶ Play</button>
+      <button class="btn" id="testCharts">📊 Test Charts</button>
       <button class="btn" id="fwd">Step &#9654;&#9654;</button>
       <span>t = <b id="tVal">0.00</b> s</span>
       <span>| Pan:</span>
@@ -363,6 +440,7 @@
       <button class="btn" id="panD">↓</button>
       <button class="btn" id="panR">→</button>
       <button class="btn" id="pan0">Reset</button>
+      <button class="btn" id="centerTable">📍 Centrar Tabla</button>
       <button class="btn" id="state0">Reset estado</button>
     </div>
     <div class="section checks" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px;">
@@ -370,16 +448,19 @@
       <label><input id="showFeet" type="checkbox" checked> Mostrar flechas de pies</label>
       <label><input id="showArc" type="checkbox" checked> Mostrar arco de α</label>
       <label><input id="showLabels" type="checkbox" checked> Mostrar etiquetas</label>
+      <label><input id="showPhiAngle" type="checkbox" checked> Mostrar ángulo φ</label>
       <label><input id="phiFollow" type="checkbox" checked> φ sigue momento (Kφ·M_rider)</label>
       <label><input id="showFlow" type="checkbox" checked> Mostrar vector de flujo (γ)</label>
       <label><input id="showChord" type="checkbox" checked> Mostrar cuerda (θ_eff)</label>
       <label><input id="showLD" type="checkbox" checked> Mostrar vectores L/D</label>
+      <label><input id="showTail" type="checkbox" checked> Mostrar cola del foil</label>
       <label><input id="showTableVel" type="checkbox" checked> Mostrar velocidad tabla</label>
       <label><input id="showAxesW" type="checkbox" checked> Ejes globales W</label>
       <label><input id="showAxesB" type="checkbox" checked> Ejes en tabla B</label>
       <label><input id="showWeight" type="checkbox" checked> Mostrar peso (mg)</label>
       <label><input id="showBuoy" type="checkbox" checked> Mostrar Arquímedes</label>
       <label><input id="showResultants" type="checkbox" checked> Mostrar resultantes</label>
+      <label><input id="showGeometry" type="checkbox"> Mostrar geometría sistema</label>
 
     </div>
   </div>
@@ -400,6 +481,9 @@
       <div class="kpi"><div class="h" title="Velocidad tabla V_tabla (m/s). Velocidad total de la tabla: V_tabla = √(u² + w²)">V_tabla (m/s)</div><div class="v" id="VTableOut" style="color:#0066cc">—</div></div>
       <div class="kpi"><div class="h" title="Empuje Arquímedes (N). Fuerza de empuje hidrostático: F_Arquímedes = ρ·g·V_submergido">Empuje Arq. (N)</div><div class="v" id="BOut">—</div></div>
       <div class="kpi"><div class="h" title="Calado tabla (m). Profundidad de inmersión de la tabla en el agua.">Calado tabla (m)</div><div class="v" id="draftOut">—</div></div>
+      <div class="kpi"><div class="h" title="Posición X del centro geométrico de la tabla (m). Coordenada horizontal en el sistema de referencia global.">X_tabla (m)</div><div class="v" id="tableX" style="color:#ff6600">—</div></div>
+      <div class="kpi"><div class="h" title="Posición Y del centro geométrico de la tabla (m). Altura del centro de presión en el sistema de referencia global.">Y_tabla (m)</div><div class="v" id="tableY" style="color:#ff6600">—</div></div>
+      <div class="kpi"><div class="h" title="Posición Z del centro geométrico de la tabla (m). Coordenada de profundidad en el sistema de referencia global.">Z_tabla (m)</div><div class="v" id="tableZ" style="color:#ff6600">—</div></div>
     </div>
     <h1>Histórico</h1>
     <div class="chartbox"><svg id="chartAngles"></svg></div>

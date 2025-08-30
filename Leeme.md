@@ -1,16 +1,28 @@
-# Simulador de Wing Foil v23h8
-
-## 📋 Descripción
+# Simulador de Wing Foil v23h9
 
 Aplicación web interactiva que simula la física y dinámica del wing foil, un deporte acuático que combina una tabla con hydrofoil y un ala inflable de mano. El simulador modela en tiempo real las fuerzas aerodinámicas, hidrodinámicas y biomecánicas involucradas en este deporte.
 
-### 🆕 **Novedades v23h8**
-- **Sistema de Control Dinámico de Límites**: Inputs completamente libres con actualización automática de sliders
-- **Flexibilidad Total**: Exploración sin restricciones de rangos personalizados
-- **Rangos Sugeridos**: Información técnica independiente en tooltips
-- **Persistencia Mejorada**: Configuraciones de límites guardadas automáticamente
+## 🆕 **Novedades v23h9**
 
-## 📦 Instalación y Ejecución
+### **Nuevos KPIs - Seguimiento de Posición de la Tabla**
+- **X_tabla (m)**: Posición horizontal del centro geométrico de la tabla en el sistema de referencia global
+- **Y_tabla (m)**: Posición vertical (altura) del centro geométrico de la tabla en el sistema de referencia global
+- **Z_tabla (m)**: Posición de profundidad del centro geométrico de la tabla en el sistema de referencia global
+- **Monitoreo en tiempo real** de las coordenadas de la tabla durante la simulación
+
+### **Interfaz de Usuario Mejorada**
+- **Botón Centrar Tabla Automático**: "📍 Centrar Tabla" para posicionamiento automático
+- **Escalado Dinámico**: Escalas optimizadas vertical (300 px/m) y horizontal (80 px/m)
+- **Depuración Mejorada**: Logging en consola para diagnóstico de posiciones
+
+### **Física y Visualización**
+- **Modo Física ODE**: Dinámica de cuerpo rígido con integración RK4
+- **Fuerzas Acopladas**: Fuerzas aerodinámicas, hidrodinámicas y de flotación completamente integradas
+- **Tooltips Interactivos**: Pase el mouse sobre vectores para información detallada
+- **Visualización del Ángulo φ**: Sistema completo de referencia con alineación del centro geométrico
+- **Control Dinámico de Límites**: Rangos flexibles de sliders con adaptación automática
+
+## 📦 **Instalación y Ejecución**
 
 ### Requisitos Previos
 - **Node.js** (versión 14 o superior)
@@ -44,7 +56,110 @@ Una vez ejecutado el servidor, abre tu navegador y ve a:
 http://localhost:3001
 ```
 
-## 🎯 Características Principales
+## 🎯 **Características Principales**
+
+### **Simulación Física en Tiempo Real**
+- **Dinámica de 6 DOF**: Posición (x,z), velocidad (u,w), orientación (θ), velocidad angular (q)
+- **Integración RK4**: Integración numérica de alta precisión para dinámica precisa
+- **Sistema de Fuerzas Acopladas**: Sustentación/resistencia aerodinámica, fuerzas hidrodinámicas, flotación, fuerzas del rider
+
+### **Visualización Interactiva**
+- **Gráficos SVG**: Gráficos vectoriales escalables para visualización nítida
+- **Actualizaciones en Tiempo Real**: Todos los parámetros se actualizan simultáneamente durante la simulación
+- **Controles de Pan y Zoom**: Navegar y escalar el área de visualización
+- **Múltiples Modos de Vista**: Mostrar/ocultar diferentes vectores de fuerza y sistemas de referencia
+
+### **KPIs Completos**
+- **Aerodinámicos**: Ángulo de ataque (α), sustentación (L), resistencia (D), relación sustentación/resistencia (L/D)
+- **Hidrodinámicos**: Empuje, fuerzas verticales, flotación
+- **Geométricos**: Posición de la tabla (X,Y,Z), altura del centro de presión (h_CoP)
+- **Rendimiento**: Porcentaje de soporte, momento del rider, velocidad de la tabla
+- **Físicos**: Calado, volumen sumergido, ángulo efectivo (θ_eff)
+
+### **Sistemas de Control**
+- **Sliders Dinámicos**: Ajuste de parámetros en tiempo real con rangos flexibles
+- **Modelo del Rider**: Fuerzas de pies delantero/trasero con distribución configurable
+- **Control del Ala**: Ángulo de incidencia, área, pendiente de curva de sustentación, características de stall
+- **Sistema de Foil**: Foil principal y cola con parámetros geométricos
+
+## 📊 **Sistema de Coordenadas**
+
+El simulador utiliza un sistema de coordenadas dextrogiro:
+- **X**: Posición horizontal (positivo hacia la derecha)
+- **Y**: Posición vertical/altura (positivo hacia arriba desde la superficie del agua)
+- **Z**: Posición de profundidad (positivo hacia adelante, actualmente establecido en 0 para la tabla)
+
+### **Puntos de Referencia**
+- **W(0,0)**: Referencia global del mundo fija
+- **B(0,0)**: Punto de referencia de popa (solidario con la tabla)
+- **Centro de la Tabla**: Centro geométrico de la tabla para seguimiento de posición
+- **Centro de Presión**: Centro aerodinámico para cálculos de fuerza
+
+## 🛠 **Arquitectura Técnica**
+
+### **Archivos Principales**
+- `index.html`: Interfaz de usuario principal con controles y visualización
+- `sim.js`: Motor físico, visualización y lógica de interacción del usuario
+- `server.js`: Servidor de desarrollo local
+- `package.json`: Dependencias de Node.js y scripts
+
+### **Modelo Físico**
+- **Aerodinámica del Ala**: Modelo 2D de sustentación/resistencia con características de stall
+- **Hidrodinámica del Foil**: Distribución de presión simplificada
+- **Flotación**: Principio de Arquímedes con cálculo de volumen sumergido
+- **Biomecánica del Rider**: Distribución de fuerza entre pies delantero/trasero
+
+### **Sistema de Visualización**
+- **Renderizado SVG**: Gráficos vectoriales con elementos interactivos
+- **Actualizaciones en Tiempo Real**: Simulación a 60 FPS con pantalla sincronizada
+- **Interfaz Escalables**: Diseño responsivo que se adapta a diferentes tamaños de pantalla
+
+## 📈 **Guía de Uso**
+
+### **Operación Básica**
+1. **Iniciar el Servidor**: Ejecutar `npm start` o `node server.js`
+2. **Abrir Navegador**: Navegar a `http://localhost:3001`
+3. **Ajustar Parámetros**: Usar sliders para modificar parámetros del ala, foil y rider
+4. **Ejecutar Simulación**: Hacer clic en el botón de reproducción para iniciar simulación en tiempo real
+5. **Monitorear KPIs**: Observar indicadores clave de rendimiento actualizándose en tiempo real
+6. **Analizar Resultados**: Usar gráficos históricos para analizar tendencias a lo largo del tiempo
+
+### **Características Avanzadas**
+- **Exploración de Parámetros**: Usar límites dinámicos para explorar rangos amplios de parámetros
+- **Análisis de Fuerzas**: Habilitar/deshabilitar diferentes vectores de fuerza para análisis detallado
+- **Seguimiento de Posición**: Monitorear coordenadas de la tabla con nuevos KPIs X,Y,Z
+- **Modo Depuración**: Revisar consola para cálculos detallados de posición y fuerza
+
+## 🤝 **Contribuciones**
+
+¡Las contribuciones son bienvenidas! No dudes en enviar issues, solicitudes de características o pull requests.
+
+### **Configuración de Desarrollo**
+```bash
+# Instalar dependencias de desarrollo
+npm install
+
+# Ejecutar en modo desarrollo con recarga automática
+npm run dev
+
+# Construir para producción
+npm run build
+```
+
+## 📄 **Licencia**
+
+Este proyecto es de código abierto. Por favor revisa el archivo de licencia para detalles.
+
+## 📞 **Contacto**
+
+Para preguntas, sugerencias o soporte:
+- **Repositorio**: [GitHub](https://github.com/ahidalgo1961/SimuladorPumpFoil)
+- **Issues**: Usa GitHub Issues para reportes de bugs y solicitudes de características
+
+---
+
+**Versión**: v23h9
+**Última Actualización**: 31 de agosto de 2025
 
 ### Sistema de Visualización
 - **Diagrama geométrico en tiempo real** con representación SVG
@@ -96,6 +211,31 @@ http://localhost:3001
 - **velscale**: Escala de vectores de velocidad (0.1-6)
 - **fuerzascale**: Escala de vectores de fuerza (0.1-6)
 - **Longitud de la tabla** (1.10-1.90 m)
+
+#### 📐 Visualización del Ángulo φ
+- **Línea de referencia gris**: Representa el ángulo φ = 0° (horizontal)
+- **Línea roja dinámica**: Muestra el ángulo φ actual de la tabla
+- **Centro de origen**: Ambas líneas parten del centro geométrico de la tabla
+- **Longitud igual**: Ambas líneas tienen la misma longitud para comparación directa
+- **Texto dinámico**: Valor φ se muestra al final de la línea roja en color rojo
+- **Actualización en tiempo real**: El ángulo varía según fuerzas del rider y ganancia Kφ
+
+#### 🔗 Sistema Rigidamente Acoplado
+- **Centro de rotación**: Centro geométrico de la tabla (cx, cy)
+- **Elementos acoplados**: Tabla + foil principal + cola giran al unísono
+- **Rotación phi**: Todos los componentes siguen la rotación de la tabla
+- **Posicionamiento relativo**: Mantiene distancias y orientaciones relativas
+- **Consistencia física**: Simula correctamente el comportamiento real del sistema
+
+#### 🎯 Tooltips Interactivos en Vectores
+- **Fuerzas en los pies**: Muestran valores de fuerza vertical ejercida por cada pie del rider
+- **Ejes de referencia**: Explican los sistemas de coordenadas global y local
+- **Vector de flujo**: Indica velocidad relativa del flujo con respecto a la tabla
+- **Vectores L/D**: Muestran fuerzas de sustentación y arrastre con valores numéricos
+- **Vectores de la cola**: Contribuciones específicas de la cola del foil
+- **Velocidad de la tabla**: Componente horizontal de velocidad de la tabla
+- **Peso y flotabilidad**: Fuerzas gravitacional y de Arquímedes
+- **Fuerzas resultantes**: Equilibrios vertical y horizontal del sistema
 
 ### KPIs en Tiempo Real
 - **α**: Ángulo de ataque efectivo
@@ -267,6 +407,7 @@ El simulador permite diferentes formas de onda para el pumping:
 - **Superficie del agua**
 - **Vectores de fuerza** en los pies
 - **Arco del ángulo de ataque**
+- **Ángulo φ de la tabla** con línea de referencia horizontal mejorada (ambas líneas parten del centro geométrico, mismo largo y grosor, texto dinámico al final de la línea roja)
 - **Etiquetas de valores**
 - **Vector de flujo**
 - **Línea de cuerda**
