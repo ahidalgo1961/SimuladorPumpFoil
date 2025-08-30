@@ -439,13 +439,56 @@ function bindUI(){
     try{ const obj=JSON.parse(localStorage.getItem(KEY)||'{}'); if(obj[id]!==undefined) el.value=obj[id]; }catch(e){}
   });
   
-  // Controles de límites para sliders de escala
-  const scaleLimits = [
-    { sliderId: 'velscale', minId: 'velscaleMin', maxId: 'velscaleMax' },
-    { sliderId: 'fuerzascale', minId: 'fuerzascaleMin', maxId: 'fuerzascaleMax' }
+  // Controles de límites para TODOS los sliders
+  const allSliderLimits = [
+    // Parámetros
+    { sliderId: 'v0', minId: 'v0Min', maxId: 'v0Max', defaultMin: 2, defaultMax: 6 },
+    { sliderId: 'phi', minId: 'phiMin', maxId: 'phiMax', defaultMin: -10, defaultMax: 15 },
+    { sliderId: 'theta0', minId: 'theta0Min', maxId: 'theta0Max', defaultMin: -5, defaultMax: 12 },
+    { sliderId: 'gamma0', minId: 'gamma0Min', maxId: 'gamma0Max', defaultMin: -15, defaultMax: 10 },
+    { sliderId: 'S', minId: 'SMin', maxId: 'SMax', defaultMin: 0.08, defaultMax: 0.22 },
+    { sliderId: 'rho', minId: 'rhoMin', maxId: 'rhoMax', defaultMin: 950, defaultMax: 1030 },
+    { sliderId: 'mass', minId: 'massMin', maxId: 'massMax', defaultMin: 55, defaultMax: 110 },
+    { sliderId: 'LD', minId: 'LDMin', maxId: 'LDMax', defaultMin: 4, defaultMax: 12 },
+    { sliderId: 'clslope', minId: 'clslopeMin', maxId: 'clslopeMax', defaultMin: 0.04, defaultMax: 0.14 },
+    { sliderId: 'clmax', minId: 'clmaxMin', maxId: 'clmaxMax', defaultMin: 0.7, defaultMax: 1.5 },
+    { sliderId: 'stall', minId: 'stallMin', maxId: 'stallMax', defaultMin: 6, defaultMax: 16 },
+    
+    // Ciclo
+    { sliderId: 'freq', minId: 'freqMin', maxId: 'freqMax', defaultMin: 0.6, defaultMax: 2.5 },
+    { sliderId: 'ampV', minId: 'ampVMin', maxId: 'ampVMax', defaultMin: 0, defaultMax: 1.2 },
+    { sliderId: 'ampT', minId: 'ampTMin', maxId: 'ampTMax', defaultMin: 0, defaultMax: 4 },
+    { sliderId: 'ampG', minId: 'ampGMin', maxId: 'ampGMax', defaultMin: 0, defaultMax: 5 },
+    { sliderId: 'phaseT', minId: 'phaseTMin', maxId: 'phaseTMax', defaultMin: 0, defaultMax: 180 },
+    { sliderId: 'phaseG', minId: 'phaseGMin', maxId: 'phaseGMax', defaultMin: 0, defaultMax: 180 },
+    { sliderId: 'dtStep', minId: 'dtStepMin', maxId: 'dtStepMax', defaultMin: 0.001, defaultMax: 0.02 },
+    
+    // Rider
+    { sliderId: 'lambda', minId: 'lambdaMin', maxId: 'lambdaMax', defaultMin: 0.3, defaultMax: 0.7 },
+    { sliderId: 'dstance', minId: 'dstanceMin', maxId: 'dstanceMax', defaultMin: 0.4, defaultMax: 0.9 },
+    { sliderId: 'Af', minId: 'AfMin', maxId: 'AfMax', defaultMin: 0, defaultMax: 600 },
+    { sliderId: 'Ab', minId: 'AbMin', maxId: 'AbMax', defaultMin: 0, defaultMax: 600 },
+    { sliderId: 'phaseF', minId: 'phaseFMin', maxId: 'phaseFMax', defaultMin: 0, defaultMax: 180 },
+    { sliderId: 'phaseB', minId: 'phaseBMin', maxId: 'phaseBMax', defaultMin: 0, defaultMax: 180 },
+    { sliderId: 'Gtheta', minId: 'GthetaMin', maxId: 'GthetaMax', defaultMin: 0, defaultMax: 0.03 },
+    { sliderId: 'Kphi', minId: 'KphiMin', maxId: 'KphiMax', defaultMin: 0, defaultMax: 0.15 },
+    { sliderId: 'h0', minId: 'h0Min', maxId: 'h0Max', defaultMin: -0.8, defaultMax: 0.2 },
+    { sliderId: 'cw', minId: 'cwMin', maxId: 'cwMax', defaultMin: 0, defaultMax: 400 },
+    { sliderId: 'vscale', minId: 'vscaleMin', maxId: 'vscaleMax', defaultMin: 200, defaultMax: 2000 },
+    { sliderId: 'hscale', minId: 'hscaleMin', maxId: 'hscaleMax', defaultMin: 60, defaultMax: 240 },
+    
+    // Tabla & Mástil
+    { sliderId: 'boardVolL', minId: 'boardVolLMin', maxId: 'boardVolLMax', defaultMin: 40, defaultMax: 140 },
+    { sliderId: 'boardArea', minId: 'boardAreaMin', maxId: 'boardAreaMax', defaultMin: 0.40, defaultMax: 1.20 },
+    { sliderId: 'mastH', minId: 'mastHMin', maxId: 'mastHMax', defaultMin: 0.60, defaultMax: 1.20 },
+    { sliderId: 'boardLen', minId: 'boardLenMin', maxId: 'boardLenMax', defaultMin: 1.10, defaultMax: 1.90 },
+    
+    // Sliders de escala
+    { sliderId: 'velscale', minId: 'velscaleMin', maxId: 'velscaleMax', defaultMin: 0.1, defaultMax: 6 },
+    { sliderId: 'fuerzascale', minId: 'fuerzascaleMin', maxId: 'fuerzascaleMax', defaultMin: 0.1, defaultMax: 6 }
   ];
   
-  scaleLimits.forEach(({ sliderId, minId, maxId }) => {
+  allSliderLimits.forEach(({ sliderId, minId, maxId, defaultMin, defaultMax }) => {
     const slider = S(sliderId);
     const minInput = S(minId);
     const maxInput = S(maxId);
@@ -455,10 +498,13 @@ function bindUI(){
       let newMin = parseFloat(minInput.value);
       let newMax = parseFloat(maxInput.value);
       
-      // Validaciones
-      if (isNaN(newMin) || newMin < 0.01) newMin = 0.01;
-      if (isNaN(newMax) || newMax > 20) newMax = 20;
-      if (newMin >= newMax) newMin = Math.max(0.01, newMax - 0.1);
+      // Validaciones usando valores por defecto si no se especifican
+      const minLimit = defaultMin || 0;
+      const maxLimit = defaultMax || 100;
+      
+      if (isNaN(newMin) || newMin < minLimit) newMin = minLimit;
+      if (isNaN(newMax) || newMax > maxLimit) newMax = maxLimit;
+      if (newMin >= newMax) newMin = Math.max(minLimit, newMax - (maxLimit - minLimit) * 0.1);
       
       // Actualizar inputs con valores validados
       minInput.value = newMin;
@@ -475,7 +521,7 @@ function bindUI(){
       if (currentValue > newMax) slider.value = newMax;
       
       // Guardar en localStorage
-      const KEY = 'wf_scale_limits_v23h7';
+      const KEY = 'wf_all_limits_v23h7';
       try {
         const limits = JSON.parse(localStorage.getItem(KEY) || '{}');
         limits[sliderId] = { min: newMin, max: newMax };
@@ -492,19 +538,27 @@ function bindUI(){
     
     // Cargar límites guardados
     try {
-      const KEY = 'wf_scale_limits_v23h7';
+      const KEY = 'wf_all_limits_v23h7';
       const limits = JSON.parse(localStorage.getItem(KEY) || '{}');
       if (limits[sliderId]) {
         minInput.value = limits[sliderId].min;
         maxInput.value = limits[sliderId].max;
         slider.min = limits[sliderId].min;
         slider.max = limits[sliderId].max;
+      } else {
+        // Usar valores por defecto si no hay guardados
+        minInput.value = defaultMin;
+        maxInput.value = defaultMax;
       }
-    } catch(e) {}
+    } catch(e) {
+      // Usar valores por defecto en caso de error
+      minInput.value = defaultMin;
+      maxInput.value = defaultMax;
+    }
     
     // Actualizar inputs con valores actuales del slider al cargar
-    minInput.value = slider.min;
-    maxInput.value = slider.max;
+    if (!minInput.value) minInput.value = slider.min;
+    if (!maxInput.value) maxInput.value = slider.max;
   });
   
   ["showHorizon","showFeet","showArc","showLabels","phiFollow","showFlow","showChord","showLD","showTableVel","showAxesW","showAxesB","showWeight","showBuoy","showResultants"]
@@ -560,7 +614,7 @@ function labelRefresh(p){
   S("phifv").textContent=p.phaseF.toFixed(0); S("phibv").textContent=p.phaseB.toFixed(0);
   S("Gthv").textContent=p.Gtheta.toFixed(4); S("Kphiv").textContent=p.Kphi.toFixed(4);
   S("h0v").textContent=p.h0.toFixed(2); S("cwv").textContent=p.cw.toFixed(0);
-  S("velscalev").textContent=p.velscale.toFixed(1); S("vscalev").textContent=p.vscale.toFixed(0); S("hscalev").textContent=p.hscale.toFixed(0); S("fuerzascalev").textContent=p.fuerzascale.toFixed(1);
+  S("vscalev").textContent=p.vscale.toFixed(0); S("hscalev").textContent=p.hscale.toFixed(0);
   S("volv").textContent=p.boardVolL.toFixed(0); S("areav").textContent=p.boardArea.toFixed(2);
   S("mastv").textContent=p.mastH.toFixed(2); S("Ltabv").textContent=p.boardLen.toFixed(2);
   S("dtv").textContent=p.dt.toFixed(3);
@@ -934,7 +988,7 @@ function draw(instOpt){
     lbl.setAttribute('y', horizonY - 8);
     lbl.setAttribute('font-size', '12');
     lbl.setAttribute('fill', '#0a6');
-    lbl.textContent='Tabla Navegando';
+    lbl.textContent = (B.draft >= B.tb) ? 'Tabla sumergida' : 'Tabla Navegando';
     svg.appendChild(lbl);
   } else {
     const lbl=document.createElementNS('http://www.w3.org/2000/svg','text');
