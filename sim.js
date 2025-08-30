@@ -1,11 +1,14 @@
 // Simulador v23h7 — estable
 const $ = id => document.getElementById(id);
 function S(id){ const el=$(id); if(!el) throw new Error('#' + id + ' no encontrado'); return el; }
-const fmt=(x,d)=> (Math.abs(x)>=1000?x.toFixed(0):x.toFixed(d));
+const fmt=(x,d)=> {
+  if (x === undefined || x === null || isNaN(x)) return '—';
+  return (Math.abs(x)>=1000?x.toFixed(0):x.toFixed(d));
+};
 
 const sliders = ["v0","phi","theta0","gamma0","S","rho","mass","LD","clslope","clmax","stall",
  "freq","ampV","ampT","ampG","phaseT","phaseG","dtStep",
- "lambda","dstance","Af","Ab","phaseF","phaseB","Gtheta","Kphi","h0","cw","vscale","hscale","vecscale",
+ "lambda","dstance","Af","Ab","phaseF","phaseB","Gtheta","Kphi","h0","cw","velscale","fuerzascale","hscale",
  "boardVolL","boardArea","mastH","boardLen"];
 
 let t=0, T=1, playing=null;
@@ -43,6 +46,75 @@ function bindUI(){
     }, {passive:true});
     try{ const obj=JSON.parse(localStorage.getItem(KEY)||'{}'); if(obj[id]!==undefined) el.value=obj[id]; }catch(e){}
   });
+  
+  // Controles de límites para sliders de escala
+  const scaleLimits = [
+    { sliderId: 'velscale', minId: 'velscaleMin', maxId: 'velscaleMax' },
+    { sliderId: 'fuerzascale', minId: 'fuerzascaleMin', maxId: 'fuerzascaleMax' }
+  ];
+  
+  scaleLimits.forEach(({ sliderId, minId, maxId }) => {
+    const slider = S(sliderId);
+    const minInput = S(minId);
+    const maxInput = S(maxId);
+    
+    // Función para actualizar límites del slider
+    const updateSliderLimits = () => {
+      let newMin = parseFloat(minInput.value);
+      let newMax = parseFloat(maxInput.value);
+      
+      // Validaciones
+      if (isNaN(newMin) || newMin < 0.01) newMin = 0.01;
+      if (isNaN(newMax) || newMax > 20) newMax = 20;
+      if (newMin >= newMax) newMin = Math.max(0.01, newMax - 0.1);
+      
+      // Actualizar inputs con valores validados
+      minInput.value = newMin;
+      maxInput.value = newMax;
+      
+      const currentValue = parseFloat(slider.value);
+      
+      // Actualizar atributos del slider
+      slider.min = newMin;
+      slider.max = newMax;
+      
+      // Ajustar valor si está fuera de límites
+      if (currentValue < newMin) slider.value = newMin;
+      if (currentValue > newMax) slider.value = newMax;
+      
+      // Guardar en localStorage
+      const KEY = 'wf_scale_limits_v23h7';
+      try {
+        const limits = JSON.parse(localStorage.getItem(KEY) || '{}');
+        limits[sliderId] = { min: newMin, max: newMax };
+        localStorage.setItem(KEY, JSON.stringify(limits));
+      } catch(e) {}
+      
+      // Actualizar display
+      updateAll();
+    };
+    
+    // Event listeners para min y max
+    minInput.addEventListener('input', updateSliderLimits);
+    maxInput.addEventListener('input', updateSliderLimits);
+    
+    // Cargar límites guardados
+    try {
+      const KEY = 'wf_scale_limits_v23h7';
+      const limits = JSON.parse(localStorage.getItem(KEY) || '{}');
+      if (limits[sliderId]) {
+        minInput.value = limits[sliderId].min;
+        maxInput.value = limits[sliderId].max;
+        slider.min = limits[sliderId].min;
+        slider.max = limits[sliderId].max;
+      }
+    } catch(e) {}
+    
+    // Actualizar inputs con valores actuales del slider al cargar
+    minInput.value = slider.min;
+    maxInput.value = slider.max;
+  });
+  
   ["showHorizon","showFeet","showArc","showLabels","phiFollow","showFlow","showChord","showLD","showTableVel","showAxesW","showAxesB","showWeight","showBuoy","showResultants"]
     .forEach(id=> S(id).addEventListener('change', draw, {passive:true}));
   S('playPause').addEventListener('click', togglePlayPause);
@@ -72,7 +144,7 @@ function P(){
     phaseT:+S("phaseT").value, phaseG:+S("phaseG").value, dt:+S("dtStep").value,
     lambda:+S("lambda").value, d:+S("dstance").value, Af:+S("Af").value, Ab:+S("Ab").value,
     phaseF:+S("phaseF").value, phaseB:+S("phaseB").value, Gtheta:+S("Gtheta").value, Kphi:+S("Kphi").value,
-    h0:+S("h0").value, cw:+S("cw").value, vscale:+S("vscale").value, hscale:+S("hscale").value, vecscale:+S("vecscale").value,
+    h0:+S("h0").value, cw:+S("cw").value, velscale:+S("velscale").value, vscale:+S("vscale").value, hscale:+S("hscale").value, fuerzascale:+S("fuerzascale").value,
     boardVolL:+S("boardVolL").value, boardArea:+S("boardArea").value, mastH:+S("mastH").value, boardLen:+S("boardLen").value,
     show:{ horizon:S("showHorizon").checked, feet:S("showFeet").checked, arc:S("showArc").checked, labels:S("showLabels").checked, flow:S("showFlow").checked, chord:S("showChord").checked, LD:S("showLD").checked, tableVel:S("showTableVel").checked, phiFollow:S("phiFollow").checked, axesW:S("showAxesW").checked, axesB:S("showAxesB").checked, weight:S("showWeight").checked, buoy:S("showBuoy").checked, result:S("showResultants").checked }
   };
@@ -93,7 +165,7 @@ function labelRefresh(p){
   S("phifv").textContent=p.phaseF.toFixed(0); S("phibv").textContent=p.phaseB.toFixed(0);
   S("Gthv").textContent=p.Gtheta.toFixed(4); S("Kphiv").textContent=p.Kphi.toFixed(4);
   S("h0v").textContent=p.h0.toFixed(2); S("cwv").textContent=p.cw.toFixed(0);
-  S("vscalev").textContent=p.vscale.toFixed(0); S("hscalev").textContent=p.hscale.toFixed(0); S("vecscalev").textContent=p.vecscale.toFixed(1);
+  S("velscalev").textContent=p.velscale.toFixed(1); S("vscalev").textContent=p.vscale.toFixed(0); S("hscalev").textContent=p.hscale.toFixed(0); S("fuerzascalev").textContent=p.fuerzascale.toFixed(1);
   S("volv").textContent=p.boardVolL.toFixed(0); S("areav").textContent=p.boardArea.toFixed(2);
   S("mastv").textContent=p.mastH.toFixed(2); S("Ltabv").textContent=p.boardLen.toFixed(2);
   S("dtv").textContent=p.dt.toFixed(3);
@@ -272,7 +344,15 @@ function buoyancy(p, h){
   return {Fb, draft, tb, y_anchor, phiDeg};
 }
 
-function resetState(){ const p=P(); h=p.h0; wv=0; t=0; cyc_acc={na:0,a:0,th:0,L:0,Th:0,Fr:0}; draw(); }
+function resetState(){ 
+  const p=P(); 
+  h=p.h0; 
+  wv=0; 
+  t=0; 
+  X = { x:0, z:-0.20, u:3.5, w:0.0, theta: 3*Math.PI/180, q:0.0 }; // Reiniciar estado ODE
+  cyc_acc={na:0,a:0,th:0,L:0,Th:0,Fr:0}; 
+  draw(); 
+}
 
 function togglePlayPause(){
   const button = S('playPause');
@@ -364,8 +444,37 @@ function step(dir){
 
 function draw(instOpt){
   const p=P(); labelRefresh(p);
-  // ⚠️  Si no hay instOpt, usa instant() (deprecated). Preferir modo ODE.
-  const inst = instOpt || instant(p,t);
+  
+  let inst;
+  if(instOpt){
+    inst = instOpt;
+  } else {
+    // Usar el mismo modo que step() para consistencia
+    if(document.getElementById('useODE') && document.getElementById('useODE').checked){
+      // Modo ODE: usar condiciones iniciales consistentes
+      const initialState = { x:0, z:-0.20, u:3.5, w:0.0, theta: 3*Math.PI/180, q:0.0 };
+      const hydro = hydroFromState(p, initialState);
+      const {Ff, Fb, Mr} = feetForcesODE(p, 0); // Usar t=0 para condiciones iniciales
+      const buoy = buoyancyZ(p, initialState.z);
+      inst = { 
+        alpha: hydro.alpha*180/Math.PI, 
+        gamma: hydro.gamma*180/Math.PI, 
+        L: hydro.L, 
+        D: hydro.D,
+        Th: hydro.Lx + hydro.Dx,
+        Vert: hydro.Ly + hydro.Dy,
+        V: hydro.V,
+        Ff, Fb,
+        theta_eff: initialState.theta*180/Math.PI,
+        Mr,
+        Sup: ((hydro.Ly + hydro.Dy + buoy.Fb) / (p.mass*9.81))*100
+      };
+    } else {
+      // Modo prescrito (deprecated)
+      inst = instant(p,t);
+    }
+  }
+  
   const B = buoyancy(p,h);
 
   // KPIs
@@ -502,7 +611,7 @@ function draw(instOpt){
     const pixStance = Math.min(0.9*Lb, Math.max(10, p.d*(p.hscale||110)));
     const front=[mid[0]+(pixStance/2)*tHat[0], mid[1]+(pixStance/2)*tHat[1]];
     const back =[mid[0]-(pixStance/2)*tHat[0], mid[1]-(pixStance/2)*tHat[1]];
-    const kpx = (40/(p.mass*9.81))*(p.vecscale||1);
+    const kpx = (40/(p.mass*9.81))*(p.fuerzascale||1);
     const fLen=Math.max(12, kpx*Math.max(0,inst.Ff));
     const bLen=Math.max(12, kpx*Math.max(0,inst.Fb));
     const fTip=[front[0]+fLen*nHat[0], front[1]+fLen*nHat[1]];
@@ -573,13 +682,31 @@ console.log('front:', front, 'ftip:',fTip[1]);
     line(cxa,cya,cxb,cyb,'#000',4); text(cxb+6,cyb,'Cuerda (φ)');
   }
   if(p.show.flow){
-    const Lf=100, vx=Lf*Math.cos(inst.gamma*Math.PI/180), vy=Lf*Math.sin(inst.gamma*Math.PI/180);
-    arrow2((cx - vx) - 100, (cy - vy) + 50, cx - 100, cy + 50, '#000', 1.2); text((cx - 100)+6, (cy + 50),'V_rel (γ)');
+    const kpx = (40/(p.mass*9.81)) * (p.velscale||1);
+    // Calcular velocidad del flujo usando parámetros base
+    const V_flow = p.V0; // Magnitud del flujo
+    const gamma_flow = p.gamma0 * Math.PI/180; // Dirección del flujo en radianes
+    const flowVx = V_flow * Math.cos(gamma_flow);
+    const flowVy = V_flow * Math.sin(gamma_flow);
+    
+    // Velocidad relativa = flujo - velocidad tabla
+    const relVx = flowVx - inst.V;
+    const relVy = flowVy - wv;
+    
+    // Usar la misma lógica que V_tabla
+    const minLength = 5 * (p.velscale || 1);
+    const currentLength = Math.sqrt(relVx*relVx + relVy*relVy);
+    const scaleFactor = currentLength < minLength && currentLength > 0 ? minLength / currentLength : 1;
+    const finalVx = relVx * kpx * scaleFactor;
+    const finalVy = relVy * kpx * scaleFactor;
+    
+    arrow2((cx - finalVx) - 100, (cy - finalVy) + 50, cx - 100, cy + 50, '#000', 1.2); 
+    text((cx - 100)+6, (cy + 50),'V_rel (γ)');
   }
 
   // Vectores L/D
   if(p.show.LD){
-    const kpx = (40/(p.mass*9.81)) * (p.vecscale||1);
+    const kpx = (40/(p.mass*9.81)) * (p.fuerzascale||1);
     const Llen = Math.max(12, kpx*Math.max(0,inst.L));
     const Dlen = Math.max(12, kpx*Math.max(0,inst.D));
     const g = inst.gamma*Math.PI/180;
@@ -589,12 +716,9 @@ console.log('front:', front, 'ftip:',fTip[1]);
     arrow2(cx, cy, cx + Dlen*dhat[0], cy + Dlen*dhat[1], '#ad8b00', 2.5);
   }
 
-  // Vector velocidad de la tabla (en la proa)
+  // Vector velocidad de la tabla (en la esquina superior derecha de la tabla)
   if(p.show.tableVel){
-    const mid=[(p1[0]+p3[0])/2,(p1[1]+p3[1])/2];
-    const pixStance = Math.min(0.9*Lb, Math.max(10, p.d*(p.hscale||110)));
-    const bow=[mid[0]+(pixStance/2)*tHat[0], mid[1]+(pixStance/2)*tHat[1]]; // Proa
-    const kpx = (40/(p.mass*9.81)) * (p.vecscale||1);
+    const kpx = (40/(p.mass*9.81)) * (p.velscale||1);
     
     // Verificar si inst.V es válido
     if (isNaN(inst.V) || inst.V === undefined) {
@@ -605,28 +729,28 @@ console.log('front:', front, 'ftip:',fTip[1]);
     const Vx = kpx * inst.V; // Componente horizontal
     const Vy = kpx * wv;     // Componente vertical (wv se actualiza en ambos modos)
     
-    // Asegurar que el vector tenga una longitud mínima visible
-    const minLength = 10;
+    // Asegurar longitud mínima visible pero proporcional a velscale
+    const minLength = 5 * (p.velscale || 1);
     const currentLength = Math.sqrt(Vx*Vx + Vy*Vy);
     const scaleFactor = currentLength < minLength && currentLength > 0 ? minLength / currentLength : 1;
     const finalVx = Vx * scaleFactor;
     const finalVy = Vy * scaleFactor;
     
-    arrow2(bow[0], bow[1], bow[0] + finalVx, bow[1] + finalVy, '#0066cc', 2.5);
-    text(bow[0] + finalVx + 6, bow[1] + finalVy, 'V_tabla');
+    arrow2(p3[0], p3[1], p3[0] + finalVx, p3[1] + finalVy, '#0066cc', 2.5);
+    text(p3[0] + finalVx + 6, p3[1] + finalVy, 'V_tabla');
   }
 
   // Peso, Arquímedes, Resultantes
   if(p.show.weight){
-    const mg=p.mass*9.81; const k=(40/(p.mass*9.81))*(p.vecscale||1);
+    const mg=p.mass*9.81; const k=(40/(p.mass*9.81))*(p.fuerzascale||1);
     arrow2(cx, cy, cx, cy + Math.max(12,k*mg), '#222', 2.5); text(cx+6, cy+22, 'mg');
   }
   if(p.show.buoy && B.draft>0){
-    const k=(40/(p.mass*9.81))*(p.vecscale||1);
+    const k=(40/(p.mass*9.81))*(p.fuerzascale||1);
     arrow2(cx, cy - p.mastH*scale, cx, cy - p.mastH*scale - Math.max(12,k*B.Fb), '#0a6', 2.5);
   }
   if(p.show.result){
-    const mg=p.mass*9.81; const k=(40/(p.mass*9.81))*(p.vecscale||1);
+    const mg=p.mass*9.81; const k=(40/(p.mass*9.81))*(p.fuerzascale||1);
     const VertRes = inst.Vert + B.Fb - mg;
     const dirv = VertRes>=0 ? -1 : 1;
     arrow2(cx, cy, cx, cy + dirv*Math.max(12, Math.abs(k*VertRes)), '#a0a', 2.5);
