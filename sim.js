@@ -656,11 +656,19 @@ function hydroFromState(p, st){
   const V = Math.hypot(u,w) || 1e-6;
   const gamma = Math.atan2(w,u);           // rad
   const alpha = theta - gamma;             // rad
-  // tu CL usa grados → convierto:
-  let CL = CL_from_alpha(alpha*180/Math.PI, p.clslope, p.clmax, p.astall);
-  if(st.z >= 0){ CL = 0; }                 // foil fuera del agua
-  const L = 0.5*p.rho*V*V*p.S*CL;
-  const D = L/Math.max(1e-6,p.LD);
+
+  // Calcular coeficientes aerodinámicos con stall realista
+  const alpha_deg = alpha*180/Math.PI;
+  const { CL, CD } = aerodynamic_coefficients(alpha_deg, p.clslope, p.clmax, p.astall, p.LD);
+
+  // Aplicar condición de foil fuera del agua
+  const final_CL = (st.z >= 0) ? 0 : CL;
+  const final_CD = (st.z >= 0) ? 0 : CD;
+
+  // Calcular fuerzas usando los coeficientes mejorados
+  const L = 0.5*p.rho*V*V*p.S*final_CL;
+  const D = 0.5*p.rho*V*V*p.S*final_CD;
+
   const Lx = L*(-Math.sin(gamma)), Ly = L*( Math.cos(gamma));
   const Dx = D*(-Math.cos(gamma)), Dy = D*(-Math.sin(gamma));
   return {alpha, gamma, V, L, D, Lx, Ly, Dx, Dy};
@@ -734,9 +742,62 @@ function riderFM(p,t){
 }
 
 function CL_from_alpha(a, slope, clmax, astall){
-  let CL=slope*a; CL=Math.sign(CL||1)*Math.min(Math.abs(CL),clmax);
-  const aa=Math.abs(a); if(aa>astall){ const fade=Math.max(0,1-(aa-astall)/8); CL*=fade; }
-  return CL;
+  const aa = Math.abs(a);
+
+  // Modelo lineal hasta el stall
+  if (aa <= astall) {
+    return Math.sign(a) * Math.min(slope * aa, clmax);
+  }
+
+  // Después del stall: caída abrupta y recuperación gradual
+  // Modelo más realista basado en datos aerodinámicos
+  const excess = aa - astall;
+  const stall_width = 8.0; // grados de ancho de la zona de stall
+
+  if (excess <= stall_width) {
+    // Zona de transición: caída rápida del CL
+    const stall_factor = 1.0 - (excess / stall_width) * 0.8; // Caída del 80% en la zona de stall
+    const base_cl = slope * astall;
+    return Math.sign(a) * Math.max(0.1, base_cl * stall_factor); // Mínimo CL de 0.1 para evitar valores negativos extremos
+  } else {
+    // Post-stall: recuperación muy gradual
+    const recovery_factor = Math.max(0.05, 1.0 - (excess - stall_width) / 20.0); // Recuperación lenta
+    const base_cl = slope * astall * 0.2; // CL muy reducido post-stall
+    return Math.sign(a) * Math.max(0.05, base_cl * recovery_factor);
+  }
+}
+
+// Función mejorada para calcular coeficientes aerodinámicos con stall realista
+function aerodynamic_coefficients(alpha_deg, slope, clmax, astall, ld_ratio) {
+  const aa = Math.abs(alpha_deg);
+
+  // Calcular CL usando la función mejorada
+  const CL = CL_from_alpha(alpha_deg, slope, clmax, astall);
+
+  // Calcular CD considerando el stall
+  let CD;
+  if (aa <= astall) {
+    // Régimen lineal: CD = CL / (L/D)
+    CD = Math.abs(CL) / Math.max(1e-6, ld_ratio);
+  } else {
+    // Stall: aumento significativo del drag
+    const excess = aa - astall;
+    const stall_width = 8.0;
+
+    if (excess <= stall_width) {
+      // Zona de stall: drag aumenta rápidamente
+      const base_cd = clmax / Math.max(1e-6, ld_ratio);
+      const stall_drag_factor = 1.0 + (excess / stall_width) * 2.0; // Aumento hasta 3x el drag
+      CD = base_cd * stall_drag_factor;
+    } else {
+      // Post-stall: drag muy alto
+      const base_cd = clmax / Math.max(1e-6, ld_ratio);
+      const post_stall_factor = 2.5 + (excess - stall_width) / 10.0; // Drag muy alto post-stall
+      CD = base_cd * Math.min(post_stall_factor, 5.0); // Máximo 5x el drag normal
+    }
+  }
+
+  return { CL, CD };
 }
 
 // Arquímedes / calado (rectángulo)
@@ -946,7 +1007,10 @@ function draw(instOpt){
   }
 
   // ===== LEYENDA DE FLECHAS =====
-  drawLegend(svg, wpx, hpx, horizonY, pan.x);
+  // Calcular si estamos en condición de stall
+  const currentAlpha = Math.abs(inst.alpha); // Ángulo de ataque actual en grados
+  const isStalling = currentAlpha > p.astall;
+  drawLegend(svg, wpx, hpx, horizonY, pan.x, isStalling, currentAlpha, p.astall);
 
   // Leyendas de estado
   const foilOut = (h >= 0);            // CoP por encima de la superficie
@@ -1181,7 +1245,7 @@ console.log('front:', front, 'ftip:',fTip[1]);
   refreshCharts();
 }
 
-function drawLegend(svg, wpx, hpx, horizonY, panX) {
+function drawLegend(svg, wpx, hpx, horizonY, panX, isStalling, currentAlpha, stallAngle) {
   // Crear contenedor de la leyenda
   const legendX = 36 + panX;
   const legendY = horizonY + 20;
@@ -1234,6 +1298,23 @@ function drawLegend(svg, wpx, hpx, horizonY, panX) {
     text.textContent = item.label;
     svg.appendChild(text);
   });
+
+  // Indicador de Stall
+  const stallY = legendY + (legendItems.length + 1) * lineHeight;
+  const stallText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  stallText.setAttribute('x', legendX);
+  stallText.setAttribute('y', stallY);
+  stallText.setAttribute('font-size', '12');
+  stallText.setAttribute('font-weight', 'bold');
+
+  if (isStalling) {
+    stallText.setAttribute('fill', '#d32f2f');
+    stallText.textContent = `⚠️ STALL: α=${currentAlpha.toFixed(1)}° > ${stallAngle.toFixed(1)}°`;
+  } else {
+    stallText.setAttribute('fill', '#2e7d32');
+    stallText.textContent = `✓ Normal: α=${currentAlpha.toFixed(1)}° ≤ ${stallAngle.toFixed(1)}°`;
+  }
+  svg.appendChild(stallText);
 }
 
 function drawSeries(svgId, series, colors, ylabel){
