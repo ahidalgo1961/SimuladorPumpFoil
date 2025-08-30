@@ -498,13 +498,10 @@ function bindUI(){
       let newMin = parseFloat(minInput.value);
       let newMax = parseFloat(maxInput.value);
       
-      // Validaciones usando valores por defecto si no se especifican
-      const minLimit = defaultMin || 0;
-      const maxLimit = defaultMax || 100;
-      
-      if (isNaN(newMin) || newMin < minLimit) newMin = minLimit;
-      if (isNaN(newMax) || newMax > maxLimit) newMax = maxLimit;
-      if (newMin >= newMax) newMin = Math.max(minLimit, newMax - (maxLimit - minLimit) * 0.1);
+      // Permitir valores libres sin restricciones
+      if (isNaN(newMin)) newMin = defaultMin;
+      if (isNaN(newMax)) newMax = defaultMax;
+      if (newMin >= newMax) newMin = newMax - 1; // Evitar que min sea mayor o igual a max
       
       // Actualizar inputs con valores validados
       minInput.value = newMin;

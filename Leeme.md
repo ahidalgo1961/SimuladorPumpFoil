@@ -1,8 +1,48 @@
-# Simulador de Wing Foil v23d
+# Simulador de Wing Foil v23h8
 
 ## 📋 Descripción
 
 Aplicación web interactiva que simula la física y dinámica del wing foil, un deporte acuático que combina una tabla con hydrofoil y un ala inflable de mano. El simulador modela en tiempo real las fuerzas aerodinámicas, hidrodinámicas y biomecánicas involucradas en este deporte.
+
+### 🆕 **Novedades v23h8**
+- **Sistema de Control Dinámico de Límites**: Inputs completamente libres con actualización automática de sliders
+- **Flexibilidad Total**: Exploración sin restricciones de rangos personalizados
+- **Rangos Sugeridos**: Información técnica independiente en tooltips
+- **Persistencia Mejorada**: Configuraciones de límites guardadas automáticamente
+
+## 📦 Instalación y Ejecución
+
+### Requisitos Previos
+- **Node.js** (versión 14 o superior)
+- **Navegador web** moderno con soporte SVG
+
+### Instalación
+```bash
+# Clonar o descargar el repositorio
+git clone https://github.com/ahidalgo1961/SimuladorPumpFoil.git
+cd SimuladorPumpFoil
+
+# Instalar dependencias
+npm install
+```
+
+### Ejecución
+```bash
+# Opción 1: Usando npm
+npm start
+
+# Opción 2: Ejecutar directamente
+node server.js
+
+# Opción 3: Abrir directamente en navegador
+# Abrir index.html en tu navegador web
+```
+
+### Acceso a la Aplicación
+Una vez ejecutado el servidor, abre tu navegador y ve a:
+```
+http://localhost:3001
+```
 
 ## 🎯 Características Principales
 
@@ -50,6 +90,13 @@ Aplicación web interactiva que simula la física y dinámica del wing foil, un 
 - **Altura del mástil** (0.60-1.20 m)
 - **Longitud de la tabla** (1.10-1.90 m)
 
+#### 📏 Parámetros de Escala y Visualización
+- **vscale**: Escala vertical del diagrama (200-2000)
+- **hscale**: Escala horizontal del diagrama (60-240)
+- **velscale**: Escala de vectores de velocidad (0.1-6)
+- **fuerzascale**: Escala de vectores de fuerza (0.1-6)
+- **Longitud de la tabla** (1.10-1.90 m)
+
 ### KPIs en Tiempo Real
 - **α**: Ángulo de ataque efectivo
 - **θ_eff**: Ángulo de incidencia efectivo
@@ -61,6 +108,64 @@ Aplicación web interactiva que simula la física y dinámica del wing foil, un 
 - **h_CoP**: Altura del centro de presión
 - **Empuje Arquímedes**: Flotabilidad de la tabla
 - **Calado**: Profundidad de inmersión de la tabla
+
+## 🎛️ **Sistema de Control Dinámico de Límites**
+
+### Características Avanzadas
+- **Inputs Completamente Libres**: Las cajas Min/Max aceptan cualquier valor numérico sin restricciones
+- **Actualización Automática**: Los sliders se adaptan dinámicamente cuando cambian los límites
+- **Rangos Sugeridos Independientes**: Información técnica disponible en tooltips (no afecta funcionalidad)
+- **Persistencia Automática**: Configuraciones de límites guardadas en localStorage
+- **Flexibilidad Total**: Permite explorar rangos personalizados sin límites artificiales
+
+### Cómo Usar el Sistema de Límites
+1. **Modificar Rangos**: Escribe nuevos valores en las cajas Min/Max de cualquier slider
+2. **Exploración Libre**: Los valores pueden ser positivos, negativos, decimales o cualquier número
+3. **Actualización Inmediata**: Los sliders responden automáticamente a los cambios
+4. **Información Técnica**: Pasa el mouse sobre las etiquetas para ver rangos sugeridos
+5. **Configuración Persistente**: Tus límites personalizados se guardan automáticamente
+
+### Beneficios del Sistema
+- **Exploración Sin Límites**: Prueba configuraciones extremas sin restricciones
+- **Análisis Personalizado**: Adapta rangos a tus necesidades específicas
+- **Interfaz Intuitiva**: Cambios se reflejan inmediatamente en la simulación
+- **Información Preservada**: Rangos técnicos siempre disponibles en tooltips
+
+## ⚙️ **Modo Físico (ODE) - RECOMENDADO**
+
+### Características Avanzadas
+- **Integración Numérica**: Método Runge-Kutta 4to orden (RK4) para máxima precisión
+- **Estados Dinámicos**: Variables x,z,u,w,θ,q completamente acopladas
+- **Fuerzas Acopladas**: Interacción completa entre aerodinámica e hidrodinámica
+- **Condiciones Iniciales Consistentes**: Estados físicos realistas al iniciar
+- **Modo Recomendado**: Sustituye al modo prescrito deprecated
+
+### Estados del Sistema ODE
+- **x**: Posición horizontal (m)
+- **z**: Posición vertical (m)
+- **u**: Velocidad horizontal (m/s)
+- **w**: Velocidad vertical (m/s)
+- **θ**: Ángulo de pitch (rad)
+- **q**: Velocidad angular (rad/s)
+
+### Ventajas sobre Modo Prescrito
+- **Precisión Física**: Comportamiento realista del sistema dinámico
+- **Estabilidad Numérica**: Integración robusta para largos periodos de simulación
+- **Acoplamiento Completo**: Todas las fuerzas interactúan correctamente
+- **Condiciones Iniciales**: Estados consistentes que evolucionan naturalmente
+
+## 🔧 **Parámetros de Escala y Visualización**
+
+### Escalas de Visualización
+- **vscale**: Escala vertical del diagrama (200-2000)
+- **hscale**: Escala horizontal del diagrama (60-240)
+- **velscale**: Escala de vectores de velocidad (0.1-6)
+- **fuerzascale**: Escala de vectores de fuerza (0.1-6)
+
+### Control de Visualización
+- **Escalas Dinámicas**: Ajusta el tamaño de los vectores y elementos gráficos
+- **Vista Personalizable**: Adapta la visualización a tus necesidades
+- **Persistencia**: Configuraciones de escala guardadas automáticamente
 
 ## 🔬 Física y Modelos Matemáticos
 
@@ -148,22 +253,39 @@ El simulador permite diferentes formas de onda para el pumping:
 2. **Step Forward/Backward**: Avanza o retrocede frame a frame
 3. **Pan**: Ajusta la vista del diagrama
 4. **Reset estado**: Reinicia posición y velocidad vertical
+5. **Modo ODE**: Activar para simulación física avanzada (recomendado)
+
+### Sistema de Control de Parámetros
+- **Sliders Interactivos**: Control directo de todos los parámetros físicos
+- **Control de Límites Dinámico**: 
+  - Cajas Min/Max completamente libres para cualquier valor
+  - Actualización automática de rangos de sliders
+  - Rangos sugeridos disponibles en tooltips
+  - Persistencia automática de configuraciones personalizadas
+- **Tooltips Informativos**: Información técnica detallada al pasar el mouse
 
 ### Opciones de Visualización
-- Superficie del agua
-- Vectores de fuerza en los pies
-- Arco del ángulo de ataque
-- Etiquetas de valores
-- Vector de flujo
-- Línea de cuerda
-- Vectores L/D
-- Ejes de referencia (global y local)
-- Peso y flotabilidad
-- Fuerzas resultantes
+- **Superficie del agua**
+- **Vectores de fuerza** en los pies
+- **Arco del ángulo de ataque**
+- **Etiquetas de valores**
+- **Vector de flujo**
+- **Línea de cuerda**
+- **Vectores L/D**
+- **Ejes de referencia** (global y local)
+- **Peso y flotabilidad**
+- **Fuerzas resultantes**
+- **Modo físico (ODE)**: Checkbox para activar simulación física avanzada
+- **Controles de escala**: vscale, hscale, velscale, fuerzascale para ajustar visualización
 
 ## 💾 Persistencia
 
-La aplicación guarda automáticamente los valores de los parámetros en el localStorage del navegador, permitiendo recuperar la configuración en sesiones posteriores.
+La aplicación guarda automáticamente en el localStorage del navegador:
+- Los valores actuales de todos los parámetros de simulación
+- Las configuraciones de límites personalizados de cada slider
+- Las preferencias de visualización y escalas
+
+Esto permite recuperar completamente la configuración personalizada en sesiones posteriores, incluyendo rangos de sliders modificados por el usuario.
 
 ## 🧮 Algoritmos Clave
 
