@@ -28,4 +28,4 @@ node server.js
 
 v23h8: Restituidas leyendas: «Tabla Navegando», «Tabla Volando» y «Foil fuera del agua».
 
-v23h9: Añadido **Modo físico (ODE)** (checkbox en Vista). Estados x,z,u,w,θ,q; integración RK4; fuerzas/Arquímedes acopladas. Mantiene modo prescrito.
+v23h9: Implementado **Modo Físico (ODE)** como único modo de simulación. Eliminado modo prescrito deprecated. Estados x,z,u,w,θ,q; integración RK4; fuerzas/Arquímedes acopladas.

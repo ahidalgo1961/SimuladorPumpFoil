@@ -641,7 +641,7 @@ const dyn = {
 
 // Estado continuo (global W): x,z,u,w,theta,q
 // ✅ Variables de estado físicas: posiciones, velocidades, ángulo y velocidad angular
-// Esto permite calcular aceleraciones y dinámica real (a diferencia del modo deprecated)
+// Esto permite calcular aceleraciones y dinámica real del sistema
 let X = { x:0, z:-0.20, u:3.5, w:0.0, theta: 3*Math.PI/180, q:0.0 };
 
 // Señales de pies (reutiliza riderFM)
@@ -737,26 +737,6 @@ function CL_from_alpha(a, slope, clmax, astall){
   let CL=slope*a; CL=Math.sign(CL||1)*Math.min(Math.abs(CL),clmax);
   const aa=Math.abs(a); if(aa>astall){ const fade=Math.max(0,1-(aa-astall)/8); CL*=fade; }
   return CL;
-}
-
-// ========== FUNCIÓN DEPRECATED ==========
-// ⚠️  DEPRECATED: instant() solo se usa en modo prescrito (deprecated)
-// Esta función calcula fuerzas aerodinámicas con velocidad prescrita,
-// ignorando la dinámica real del sistema. Use hydroFromState() en modo ODE.
-function instant(p,t){
-  const {Ff,Fb,Mr}=riderFM(p,t);
-  const theta_eff = p.theta0 - p.Gtheta*Mr;
-  const gamma = p.gamma0 + p.ampG*Math.sin(2*Math.PI*p.freq*t + p.phaseG*Math.PI/180);
-  const alpha = theta_eff - gamma;
-  const V = p.V0 + p.ampV*Math.sin(2*Math.PI*p.freq*t);
-  let CL=CL_from_alpha(alpha,p.clslope,p.clmax,p.astall);
-  if(h>=0){ CL=0; } else { const hFade=0.05; if(-h<hFade) CL*=(-h/hFade); }
-  const L=0.5*p.rho*V*V*p.S*CL;
-  const D=L/Math.max(1e-6,p.LD);
-  const Lx=L*Math.cos((gamma+90)*Math.PI/180), Ly=L*Math.sin((gamma+90)*Math.PI/180);
-  const Dx=D*Math.cos((gamma+180)*Math.PI/180), Dy=D*Math.sin((gamma+180)*Math.PI/180);
-  const Th=Lx+Dx, Vert=Ly+Dy, Sup=(Vert/(p.mass*9.81))*100;
-  return {Ff,Fb,Mr,theta_eff,gamma,alpha,V,L,D,Th,Vert,Sup};
 }
 
 // Arquímedes / calado (rectángulo)
@@ -859,32 +839,19 @@ function step(dir){
   if(dir<0 && (old_t%T) < (t%T)) crossed = true;
 
   let ins;
-  if(document.getElementById('useODE') && document.getElementById('useODE').checked){
-    // Integrar ODE
-    const sign = (dir>=0)? 1 : -1;
-    X = rk4Step(X, sign*dt, p, t);
-    h = X.z;  // usar z como heave para el dibujo (m)
-    wv = X.w; // actualizar velocidad vertical global para consistencia
-    
-    // Obtener fuerzas del rider para el modo ODE
-    const {Ff, Fb} = feetForcesODE(p, t);
-    
-    ins = { alpha:X._out.alpha, gamma:X._out.gamma, L:X._out.L, D:X._out.D,
-            Th:X._out.Th, Vert:X._out.Vert, V:X.u, Ff, Fb,
-            Sup: ((X._out.Vert + buoyancy(p,h).Fb) / (p.mass*9.81))*100,
-            theta_eff: X.theta*180/Math.PI, Mr:X._out.Mr };
-  } else {
-    // ========== MODO PRESCRITO (DEPRECATED) ==========
-    // ⚠️  DEPRECATED: Este modo usa velocidad prescrita y no considera
-    // la dinámica real del sistema. Use el modo ODE para simulaciones físicas.
-    // El modo prescrito será removido en futuras versiones.
-    console.warn('⚠️ Modo prescrito (no ODE) está deprecated. Use el modo físico (ODE) para mejores resultados.');
-    const ins0 = instant(p, (t%T+T)%T);
-    // mantener integrador vertical existente si lo tienes (h, wv)
-    const B=buoyancy(p,h); const mg=p.mass*9.81; const acc=(ins0.Vert+B.Fb-mg-p.cw*wv)/p.mass;
-    wv += acc*dt; h += wv*dt;
-    ins = ins0;
-  }
+  // Integrar ODE (modo físico recomendado)
+  const sign = (dir>=0)? 1 : -1;
+  X = rk4Step(X, sign*dt, p, t);
+  h = X.z;  // usar z como heave para el dibujo (m)
+  wv = X.w; // actualizar velocidad vertical global para consistencia
+  
+  // Obtener fuerzas del rider para el modo ODE
+  const {Ff, Fb} = feetForcesODE(p, t);
+  
+  ins = { alpha:X._out.alpha, gamma:X._out.gamma, L:X._out.L, D:X._out.D,
+          Th:X._out.Th, Vert:X._out.Vert, V:X.u, Ff, Fb,
+          Sup: ((X._out.Vert + buoyancy(p,h).Fb) / (p.mass*9.81))*100,
+          theta_eff: X.theta*180/Math.PI, Mr:X._out.Mr };
 
   S('tVal').textContent=((t%T+T)%T).toFixed(2);
 
@@ -904,30 +871,24 @@ function draw(instOpt){
   if(instOpt){
     inst = instOpt;
   } else {
-    // Usar el mismo modo que step() para consistencia
-    if(document.getElementById('useODE') && document.getElementById('useODE').checked){
-      // Modo ODE: usar condiciones iniciales consistentes
-      const initialState = { x:0, z:-0.20, u:3.5, w:0.0, theta: 3*Math.PI/180, q:0.0 };
-      const hydro = hydroFromState(p, initialState);
-      const {Ff, Fb, Mr} = feetForcesODE(p, 0); // Usar t=0 para condiciones iniciales
-      const buoy = buoyancyZ(p, initialState.z);
-      inst = { 
-        alpha: hydro.alpha*180/Math.PI, 
-        gamma: hydro.gamma*180/Math.PI, 
-        L: hydro.L, 
-        D: hydro.D,
-        Th: hydro.Lx + hydro.Dx,
-        Vert: hydro.Ly + hydro.Dy,
-        V: hydro.V,
-        Ff, Fb,
-        theta_eff: initialState.theta*180/Math.PI,
-        Mr,
-        Sup: ((hydro.Ly + hydro.Dy + buoy.Fb) / (p.mass*9.81))*100
-      };
-    } else {
-      // Modo prescrito (deprecated)
-      inst = instant(p,t);
-    }
+    // Modo ODE: usar condiciones iniciales consistentes
+    const initialState = { x:0, z:-0.20, u:3.5, w:0.0, theta: 3*Math.PI/180, q:0.0 };
+    const hydro = hydroFromState(p, initialState);
+    const {Ff, Fb, Mr} = feetForcesODE(p, 0); // Usar t=0 para condiciones iniciales
+    const buoy = buoyancyZ(p, initialState.z);
+    inst = { 
+      alpha: hydro.alpha*180/Math.PI, 
+      gamma: hydro.gamma*180/Math.PI, 
+      L: hydro.L, 
+      D: hydro.D,
+      Th: hydro.Lx + hydro.Dx,
+      Vert: hydro.Ly + hydro.Dy,
+      V: hydro.V,
+      Ff, Fb,
+      theta_eff: initialState.theta*180/Math.PI,
+      Mr,
+      Sup: ((hydro.Ly + hydro.Dy + buoy.Fb) / (p.mass*9.81))*100
+    };
   }
   
   const B = buoyancy(p,h);
@@ -984,7 +945,9 @@ function draw(instOpt){
     text(wpx-140,horizonY-6,'Superficie del agua',10);
   }
 
-  
+  // ===== LEYENDA DE FLECHAS =====
+  drawLegend(svg, wpx, hpx, horizonY, pan.x);
+
   // Leyendas de estado
   const foilOut = (h >= 0);            // CoP por encima de la superficie
   const boardInWater = (B.draft > 0);  // parte de la tabla mojada
@@ -1212,7 +1175,65 @@ console.log('front:', front, 'ftip:',fTip[1]);
     arrow2(cx, cy, cx + Math.sign(inst.Th)*Math.max(12, Math.abs(k*inst.Th)), cy, '#a0a', 2.5);
   }
 
+  // Dibujar leyenda de colores
+  drawLegend(svg, wpx, hpx, horizonY, pan.x);
+
   refreshCharts();
+}
+
+function drawLegend(svg, wpx, hpx, horizonY, panX) {
+  // Crear contenedor de la leyenda
+  const legendX = 36 + panX;
+  const legendY = horizonY + 20;
+  const lineHeight = 16;
+  
+  // Título de la leyenda
+  const title = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  title.setAttribute('x', legendX);
+  title.setAttribute('y', legendY);
+  title.setAttribute('font-size', '14');
+  title.setAttribute('font-weight', 'bold');
+  title.setAttribute('fill', '#333');
+  title.textContent = 'Leyenda:';
+  svg.appendChild(title);
+  
+  // Definir elementos de la leyenda con sus colores y descripciones
+  const legendItems = [
+    { color: '#c00', label: 'Fuerza Rider (Rojo)' },
+    { color: '#00c', label: 'Fuerza Rider (Azul)' },
+    { color: '#2e7d32', label: 'Lift (Verde)' },
+    { color: '#ad8b00', label: 'Drag (Amarillo)' },
+    { color: '#0066cc', label: 'Velocidad Tabla (Azul)' },
+    { color: '#222', label: 'Peso (Gris)' },
+    { color: '#0a6', label: 'Empuje (Verde claro)' },
+    { color: '#a0a', label: 'Resultante (Magenta)' },
+    { color: '#000', label: 'Ejes de referencia (Negro)' }
+  ];
+  
+  // Dibujar cada elemento de la leyenda
+  legendItems.forEach((item, index) => {
+    const y = legendY + (index + 1) * lineHeight;
+    
+    // Dibujar rectángulo de color
+    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rect.setAttribute('x', legendX);
+    rect.setAttribute('y', y - 10);
+    rect.setAttribute('width', '12');
+    rect.setAttribute('height', '12');
+    rect.setAttribute('fill', item.color);
+    rect.setAttribute('stroke', '#333');
+    rect.setAttribute('stroke-width', '1');
+    svg.appendChild(rect);
+    
+    // Dibujar texto
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', legendX + 18);
+    text.setAttribute('y', y);
+    text.setAttribute('font-size', '11');
+    text.setAttribute('fill', '#333');
+    text.textContent = item.label;
+    svg.appendChild(text);
+  });
 }
 
 function drawSeries(svgId, series, colors, ylabel){

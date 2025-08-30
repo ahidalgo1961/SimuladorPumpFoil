@@ -131,14 +131,14 @@ http://localhost:3001
 - **Interfaz Intuitiva**: Cambios se reflejan inmediatamente en la simulación
 - **Información Preservada**: Rangos técnicos siempre disponibles en tooltips
 
-## ⚙️ **Modo Físico (ODE) - RECOMENDADO**
+## ⚙️ **Modo Físico (ODE) - ÚNICO MODO**
 
 ### Características Avanzadas
 - **Integración Numérica**: Método Runge-Kutta 4to orden (RK4) para máxima precisión
 - **Estados Dinámicos**: Variables x,z,u,w,θ,q completamente acopladas
 - **Fuerzas Acopladas**: Interacción completa entre aerodinámica e hidrodinámica
 - **Condiciones Iniciales Consistentes**: Estados físicos realistas al iniciar
-- **Modo Recomendado**: Sustituye al modo prescrito deprecated
+- **Modo Único**: Simulación física avanzada como estándar
 
 ### Estados del Sistema ODE
 - **x**: Posición horizontal (m)
@@ -148,7 +148,7 @@ http://localhost:3001
 - **θ**: Ángulo de pitch (rad)
 - **q**: Velocidad angular (rad/s)
 
-### Ventajas sobre Modo Prescrito
+### Ventajas del Modo ODE
 - **Precisión Física**: Comportamiento realista del sistema dinámico
 - **Estabilidad Numérica**: Integración robusta para largos periodos de simulación
 - **Acoplamiento Completo**: Todas las fuerzas interactúan correctamente
@@ -253,7 +253,6 @@ El simulador permite diferentes formas de onda para el pumping:
 2. **Step Forward/Backward**: Avanza o retrocede frame a frame
 3. **Pan**: Ajusta la vista del diagrama
 4. **Reset estado**: Reinicia posición y velocidad vertical
-5. **Modo ODE**: Activar para simulación física avanzada (recomendado)
 
 ### Sistema de Control de Parámetros
 - **Sliders Interactivos**: Control directo de todos los parámetros físicos
@@ -275,7 +274,6 @@ El simulador permite diferentes formas de onda para el pumping:
 - **Ejes de referencia** (global y local)
 - **Peso y flotabilidad**
 - **Fuerzas resultantes**
-- **Modo físico (ODE)**: Checkbox para activar simulación física avanzada
 - **Controles de escala**: vscale, hscale, velscale, fuerzascale para ajustar visualización
 
 ## 💾 Persistencia
