@@ -74,25 +74,25 @@
       <div class="row">
         <label title="Ángulo de ataque base θ₀ (°). Ángulo base de la cuerda del ala. Positivo cuando el borde de ataque está arriba (sentido antihorario desde eje horizontal). Convención aerodinámica estándar.">θ₀ base (°) <b id="thetav"></b></label>
         <div class="slider-container">
-          <input type="number" class="scale-input" min="-5" max="12" step="0.1" value="-5" title="Límite mínimo" id="theta0Min">
+          <input type="number" class="scale-input" step="0.1" value="-5" title="Límite mínimo" id="theta0Min">
           <input id="theta0" type="range" min="-5" max="12" step="0.1" value="3.5">
-          <input type="number" class="scale-input" min="-5" max="12" step="0.1" value="12" title="Límite máximo" id="theta0Max">
+          <input type="number" class="scale-input" step="0.1" value="12" title="Límite máximo" id="theta0Max">
         </div>
       </div>
       <div class="row">
         <label title="Ángulo de flujo base γ₀ (°). Ángulo base de la velocidad relativa del flujo. Positivo cuando el flujo viene desde arriba (sentido antihorario desde eje horizontal).">γ₀ (°) <b id="gammav"></b></label>
         <div class="slider-container">
-          <input type="number" class="scale-input" min="-15" max="10" step="0.1" value="-15" title="Límite mínimo" id="gamma0Min">
+          <input type="number" class="scale-input" step="0.1" value="-15" title="Límite mínimo" id="gamma0Min">
           <input id="gamma0" type="range" min="-15" max="10" step="0.1" value="-2">
-          <input type="number" class="scale-input" min="-15" max="10" step="0.1" value="10" title="Límite máximo" id="gamma0Max">
+          <input type="number" class="scale-input" step="0.1" value="10" title="Límite máximo" id="gamma0Max">
         </div>
       </div>
       <div class="row">
         <label title="Superficie alar S (m²). Área proyectada del ala del foil. Superficie efectiva para generar sustentación.">S (m²) <b id="Sv"></b></label>
         <div class="slider-container">
-          <input type="number" class="scale-input" min="0.08" max="0.22" step="0.005" value="0.08" title="Límite mínimo" id="SMin">
+          <input type="number" class="scale-input" step="0.005" value="0.08" title="Límite mínimo" id="SMin">
           <input id="S" type="range" min="0.08" max="0.22" step="0.005" value="0.14">
-          <input type="number" class="scale-input" min="0.08" max="0.22" step="0.005" value="0.22" title="Límite máximo" id="SMax">
+          <input type="number" class="scale-input" step="0.005" value="0.22" title="Límite máximo" id="SMax">
         </div>
       </div>
       <div class="row">
@@ -198,9 +198,9 @@
       <div class="row">
         <label title="Paso de integración Δt (s). Paso de tiempo para el integrador numérico. Afecta precisión y velocidad de simulación.">Δt (s) <b id="dtv"></b></label>
         <div class="slider-container">
-          <input type="number" class="scale-input" min="0.001" max="0.02" step="0.001" value="0.001" title="Límite mínimo" id="dtStepMin">
+          <input type="number" class="scale-input" step="0.001" value="0.001" title="Límite mínimo" id="dtStepMin">
           <input id="dtStep" type="range" min="0.001" max="0.02" step="0.001" value="0.004">
-          <input type="number" class="scale-input" min="0.001" max="0.02" step="0.001" value="0.02" title="Límite máximo" id="dtStepMax">
+          <input type="number" class="scale-input" step="0.001" value="0.02" title="Límite máximo" id="dtStepMax">
         </div>
       </div>
     </div>
@@ -210,113 +210,113 @@
       <div class="row">
         <label title="Reparto estático λ (adimensional). Fracción de peso apoyada en el pie delantero. λ = F_delantero / Peso_total">λ reparto (front) <b id="lambdav"></b></label>
         <div class="slider-container">
-          <input type="number" class="scale-input" min="0.3" max="0.7" step="0.01" value="0.3" title="Límite mínimo" id="lambdaMin">
+          <input type="number" class="scale-input" step="0.01" value="0.3" title="Límite mínimo" id="lambdaMin">
           <input id="lambda" type="range" min="0.3" max="0.7" step="0.01" value="0.55">
-          <input type="number" class="scale-input" min="0.3" max="0.7" step="0.01" value="0.7" title="Límite máximo" id="lambdaMax">
+          <input type="number" class="scale-input" step="0.01" value="0.7" title="Límite máximo" id="lambdaMax">
         </div>
       </div>
       <div class="row">
         <label title="Distancia entre pies d (m). Distancia horizontal entre los puntos de apoyo de los pies.">d stance (m) <b id="dv"></b></label>
         <div class="slider-container">
-          <input type="number" class="scale-input" min="0.4" max="0.9" step="0.01" value="0.4" title="Límite mínimo" id="dstanceMin">
+          <input type="number" class="scale-input" step="0.01" value="0.4" title="Límite mínimo" id="dstanceMin">
           <input id="dstance" type="range" min="0.4" max="0.9" step="0.01" value="0.70">
-          <input type="number" class="scale-input" min="0.4" max="0.9" step="0.01" value="0.9" title="Límite máximo" id="dstanceMax">
+          <input type="number" class="scale-input" step="0.01" value="0.9" title="Límite máximo" id="dstanceMax">
         </div>
       </div>
       <div class="row">
         <label title="Amplitud delantera A_f (N). Amplitud de fuerza adicional en el pie delantero. F_delantero(t) = λ·mg + A_f·sin(2πft + φ_f)">A_f (N) <b id="Afv"></b></label>
         <div class="slider-container">
-          <input type="number" class="scale-input" min="0" max="600" step="5" value="0" title="Límite mínimo" id="AfMin">
+          <input type="number" class="scale-input" step="5" value="0" title="Límite mínimo" id="AfMin">
           <input id="Af" type="range" min="0" max="600" step="5" value="120">
-          <input type="number" class="scale-input" min="0" max="600" step="5" value="600" title="Límite máximo" id="AfMax">
+          <input type="number" class="scale-input" step="5" value="600" title="Límite máximo" id="AfMax">
         </div>
       </div>
       <div class="row">
         <label title="Amplitud trasera A_b (N). Amplitud de fuerza adicional en el pie trasero. F_trasero(t) = (1-λ)·mg + A_b·sin(2πft + φ_b)">A_b (N) <b id="Abv"></b></label>
         <div class="slider-container">
-          <input type="number" class="scale-input" min="0" max="600" step="5" value="0" title="Límite mínimo" id="AbMin">
+          <input type="number" class="scale-input" step="5" value="0" title="Límite mínimo" id="AbMin">
           <input id="Ab" type="range" min="0" max="600" step="5" value="220">
-          <input type="number" class="scale-input" min="0" max="600" step="5" value="600" title="Límite máximo" id="AbMax">
+          <input type="number" class="scale-input" step="5" value="600" title="Límite máximo" id="AbMax">
         </div>
       </div>
       <div class="row">
         <label title="Fase delantera φ_f (°). Fase para la fuerza del pie delantero.">fase_f (°) <b id="phifv"></b></label>
         <div class="slider-container">
-          <input type="number" class="scale-input" min="0" max="180" step="5" value="0" title="Límite mínimo" id="phaseFMin">
+          <input type="number" class="scale-input" step="5" value="0" title="Límite mínimo" id="phaseFMin">
           <input id="phaseF" type="range" min="0" max="180" step="5" value="0">
-          <input type="number" class="scale-input" min="0" max="180" step="5" value="180" title="Límite máximo" id="phaseFMax">
+          <input type="number" class="scale-input" step="5" value="180" title="Límite máximo" id="phaseFMax">
         </div>
       </div>
       <div class="row">
         <label title="Fase trasera φ_b (°). Fase para la fuerza del pie trasero.">fase_b (°) <b id="phibv"></b></label>
         <div class="slider-container">
-          <input type="number" class="scale-input" min="0" max="180" step="5" value="0" title="Límite mínimo" id="phaseBMin">
+          <input type="number" class="scale-input" step="5" value="0" title="Límite mínimo" id="phaseBMin">
           <input id="phaseB" type="range" min="0" max="180" step="5" value="60">
-          <input type="number" class="scale-input" min="0" max="180" step="5" value="180" title="Límite máximo" id="phaseBMax">
+          <input type="number" class="scale-input" step="5" value="180" title="Límite máximo" id="phaseBMax">
         </div>
       </div>
       <div class="row">
         <label title="Ganancia θ G_θ (°/(N·m)). Ganancia del ángulo de ataque respecto al momento del rider: θ_eff = θ₀ - G_θ·M_rider">Gθ (deg/(N·m)) <b id="Gthv"></b></label>
         <div class="slider-container">
-          <input type="number" class="scale-input" min="0" max="0.03" step="0.0005" value="0" title="Límite mínimo" id="GthetaMin">
+          <input type="number" class="scale-input" step="0.0005" value="0" title="Límite mínimo" id="GthetaMin">
           <input id="Gtheta" type="range" min="0" max="0.03" step="0.0005" value="0.004">
-          <input type="number" class="scale-input" min="0" max="0.03" step="0.0005" value="0.03" title="Límite máximo" id="GthetaMax">
+          <input type="number" class="scale-input" step="0.0005" value="0.03" title="Límite máximo" id="GthetaMax">
         </div>
       </div>
       <div class="row">
         <label title="Ganancia φ K_φ (°/(N·m)). Ganancia del ángulo φ respecto al momento del rider: φ_eff = φ₀ - K_φ·M_rider">Kφ (deg/(N·m)) <b id="Kphiv"></b></label>
         <div class="slider-container">
-          <input type="number" class="scale-input" min="0" max="0.15" step="0.0005" value="0" title="Límite mínimo" id="KphiMin">
+          <input type="number" class="scale-input" step="0.0005" value="0" title="Límite mínimo" id="KphiMin">
           <input id="Kphi" type="range" min="0" max="0.15" step="0.0005" value="0.050">
-          <input type="number" class="scale-input" min="0" max="0.15" step="0.0005" value="0.15" title="Límite máximo" id="KphiMax">
+          <input type="number" class="scale-input" step="0.0005" value="0.15" title="Límite máximo" id="KphiMax">
         </div>
       </div>
       <div class="row">
         <label title="Altura inicial h₀ (m). Altura inicial del centro de presión. Negativo = bajo el agua. Positivo = sobre el agua.">h₀ (m, <i>negativo</i>) <b id="h0v"></b></label>
         <div class="slider-container">
-          <input type="number" class="scale-input" min="-0.8" max="0.2" step="0.01" value="-0.8" title="Límite mínimo" id="h0Min">
+          <input type="number" class="scale-input" step="0.01" value="-0.8" title="Límite mínimo" id="h0Min">
           <input id="h0" type="range" min="-0.8" max="0.2" step="0.01" value="-0.20">
-          <input type="number" class="scale-input" min="-0.8" max="0.2" step="0.01" value="0.2" title="Límite máximo" id="h0Max">
+          <input type="number" class="scale-input" step="0.01" value="0.2" title="Límite máximo" id="h0Max">
         </div>
       </div>
       <div class="row">
         <label title="Amortiguamiento vertical c_w (N·s/m). Coeficiente de amortiguamiento vertical. F_amort = -c_w·v_vertical">c_w (N·s/m) <b id="cwv"></b></label>
         <div class="slider-container">
-          <input type="number" class="scale-input" min="0" max="400" step="5" value="0" title="Límite mínimo" id="cwMin">
+          <input type="number" class="scale-input" step="5" value="0" title="Límite mínimo" id="cwMin">
           <input id="cw" type="range" min="0" max="400" step="5" value="150">
-          <input type="number" class="scale-input" min="0" max="400" step="5" value="400" title="Límite máximo" id="cwMax">
+          <input type="number" class="scale-input" step="5" value="400" title="Límite máximo" id="cwMax">
         </div>
       </div>
       <div class="row">
         <label title="Escala vertical (px/m). Factor de escala para la dimensión vertical en el diagrama (píxeles por metro).">escala vertical (px/m) <b id="vscalev"></b></label>
         <div class="slider-container">
-          <input type="number" class="scale-input" min="200" max="2000" step="20" value="200" title="Límite mínimo" id="vscaleMin">
+          <input type="number" class="scale-input" step="20" value="200" title="Límite mínimo" id="vscaleMin">
           <input id="vscale" type="range" min="200" max="2000" step="20" value="600">
-          <input type="number" class="scale-input" min="200" max="2000" step="20" value="2000" title="Límite máximo" id="vscaleMax">
+          <input type="number" class="scale-input" step="20" value="2000" title="Límite máximo" id="vscaleMax">
         </div>
       </div>
       <div class="row">
         <label title="Escala horizontal (px/m). Factor de escala para longitudes horizontales en el diagrama (píxeles por metro).">escala horizontal (px/m) <b id="hscalev"></b></label>
         <div class="slider-container">
-          <input type="number" class="scale-input" min="60" max="240" step="5" value="60" title="Límite mínimo" id="hscaleMin">
+          <input type="number" class="scale-input" step="5" value="60" title="Límite mínimo" id="hscaleMin">
           <input id="hscale" type="range" min="60" max="240" step="5" value="110">
-          <input type="number" class="scale-input" min="60" max="240" step="5" value="240" title="Límite máximo" id="hscaleMax">
+          <input type="number" class="scale-input" step="5" value="240" title="Límite máximo" id="hscaleMax">
         </div>
       </div>
       <div class="scale-row">
         <label style="font-size:9px;color:#444;">velocidad</label>
         <div class="slider-container">
-          <input id="velscaleMin" type="number" min="0.01" max="10" step="0.1" value="0.1" class="scale-input" title="Límite mínimo">
+          <input id="velscaleMin" type="number" step="0.1" value="0.1" class="scale-input" title="Límite mínimo">
           <input id="velscale" type="range" min="0.1" max="6" step="0.1" value="1.8">
-          <input id="velscaleMax" type="number" min="0.1" max="20" step="0.1" value="6" class="scale-input" title="Límite máximo">
+          <input id="velscaleMax" type="number" step="0.1" value="6" class="scale-input" title="Límite máximo">
         </div>
       </div>
       <div class="scale-row">
         <label style="font-size:9px;color:#444;">fuerzas</label>
         <div class="slider-container">
-          <input id="fuerzascaleMin" type="number" min="0.01" max="10" step="0.1" value="0.1" class="scale-input" title="Límite mínimo">
+          <input id="fuerzascaleMin" type="number" step="0.1" value="0.1" class="scale-input" title="Límite mínimo">
           <input id="fuerzascale" type="range" min="0.1" max="6" step="0.1" value="1.8">
-          <input id="fuerzascaleMax" type="number" min="0.1" max="20" step="0.1" value="6" class="scale-input" title="Límite máximo">
+          <input id="fuerzascaleMax" type="number" step="0.1" value="6" class="scale-input" title="Límite máximo">
         </div>
       </div>
     </div>
@@ -326,33 +326,33 @@
       <div class="row">
         <label title="Volumen tabla (L). Volumen de la tabla para cálculo de empuje de Arquímedes.">Volumen tabla (L) <b id="volv"></b></label>
         <div class="slider-container">
-          <input type="number" class="scale-input" min="40" max="140" step="1" value="40" title="Límite mínimo" id="boardVolLMin">
+          <input type="number" class="scale-input" step="1" value="40" title="Límite mínimo" id="boardVolLMin">
           <input id="boardVolL" type="range" min="40" max="140" step="1" value="90">
-          <input type="number" class="scale-input" min="40" max="140" step="1" value="140" title="Límite máximo" id="boardVolLMax">
+          <input type="number" class="scale-input" step="1" value="140" title="Límite máximo" id="boardVolLMax">
         </div>
       </div>
       <div class="row">
         <label title="Superficie tabla (m²). Área de la superficie mojada de la tabla para cálculo de empuje de Arquímedes.">Superficie tabla (m²) <b id="areav"></b></label>
         <div class="slider-container">
-          <input type="number" class="scale-input" min="0.40" max="1.20" step="0.01" value="0.40" title="Límite mínimo" id="boardAreaMin">
+          <input type="number" class="scale-input" step="0.01" value="0.40" title="Límite mínimo" id="boardAreaMin">
           <input id="boardArea" type="range" min="0.40" max="1.20" step="0.01" value="0.75">
-          <input type="number" class="scale-input" min="0.40" max="1.20" step="0.01" value="1.20" title="Límite máximo" id="boardAreaMax">
+          <input type="number" class="scale-input" step="0.01" value="1.20" title="Límite máximo" id="boardAreaMax">
         </div>
       </div>
       <div class="row">
         <label title="Altura mástil (m). Altura desde la tabla hasta el foil.">Altura mástil (m) <b id="mastv"></b></label>
         <div class="slider-container">
-          <input type="number" class="scale-input" min="0.60" max="1.20" step="0.01" value="0.60" title="Límite mínimo" id="mastHMin">
+          <input type="number" class="scale-input" step="0.01" value="0.60" title="Límite mínimo" id="mastHMin">
           <input id="mastH" type="range" min="0.60" max="1.20" step="0.01" value="0.85">
-          <input type="number" class="scale-input" min="0.60" max="1.20" step="0.01" value="1.20" title="Límite máximo" id="mastHMax">
+          <input type="number" class="scale-input" step="0.01" value="1.20" title="Límite máximo" id="mastHMax">
         </div>
       </div>
       <div class="row">
         <label title="Longitud tabla (m). Longitud total de la tabla para representación gráfica.">L tabla (m) <b id="Ltabv"></b></label>
         <div class="slider-container">
-          <input type="number" class="scale-input" min="1.10" max="1.90" step="0.01" value="1.10" title="Límite mínimo" id="boardLenMin">
+          <input type="number" class="scale-input" step="0.01" value="1.10" title="Límite mínimo" id="boardLenMin">
           <input id="boardLen" type="range" min="1.10" max="1.90" step="0.01" value="1.50">
-          <input type="number" class="scale-input" min="1.10" max="1.90" step="0.01" value="1.90" title="Límite máximo" id="boardLenMax">
+          <input type="number" class="scale-input" step="0.01" value="1.90" title="Límite máximo" id="boardLenMax">
         </div>
       </div>
     </div>
