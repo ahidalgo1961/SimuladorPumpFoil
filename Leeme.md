@@ -216,3 +216,91 @@ Este simulador es útil para:
 - **Diseño**: Evaluación de parámetros de foils
 - **Investigación**: Estudio de la dinámica del sistema
 - **Optimización**: Búsqueda de configuraciones eficientes
+
+---
+
+# 🚀 Guía de Inicio Rápido
+
+## 🎯 Cómo Elegir el Modo de Servidor
+
+| Situación | Mejor Opción | Comando | Ventajas |
+|-----------|-------------|---------|----------|
+| **Desarrollo diario** | **Live Server** | `npx live-server --port=8080` | ✅ Auto-recarga automática<br>✅ Puerto automático<br>✅ Cualquier navegador |
+| **Vista rápida** | **Simple Browser** | Ctrl+Shift+P → "Simple Browser: Show" | ✅ Integrado en VS Code<br>✅ Sin instalación<br>✅ Vista rápida |
+| **Producción** | **Node.js Server** | `node server.js` | ✅ Control total<br>✅ Personalizable<br>✅ Sin dependencias externas |
+| **Sin internet** | **Archivo Directo** | Arrastrar `index.html` al navegador | ✅ Sin servidor<br>✅ Ultra-rápido<br>✅ Sin dependencias |
+
+## 📋 Instrucciones para Cada Modo
+
+### 🌐 **MODO 1: Servidor Node.js**
+```bash
+# En la carpeta del proyecto:
+node server.js
+# Se ejecuta en: http://localhost:3001
+```
+**Ventajas:** Control total, personalizable, sin dependencias externas
+
+### 🔄 **MODO 2: Live Server**
+```bash
+# Instalar (solo primera vez):
+npm install -g live-server
+
+# Ejecutar desde cualquier carpeta:
+live-server --port=8080
+
+# O usar npx (sin instalación global):
+npx live-server --port=8080
+```
+**Ventajas:** Auto-recarga al cambiar archivos, puerto automático, funciona con cualquier navegador
+
+### 💻 **MODO 3: Simple Browser (VS Code)**
+1. Abrir VS Code
+2. Presionar `Ctrl+Shift+P` (o `Cmd+Shift+P` en Mac)
+3. Escribir: "Simple Browser: Show"
+4. Seleccionar la opción
+5. Navegar al archivo `index.html`
+
+**Ventajas:** Integrado en VS Code, vista rápida, sin instalación adicional
+
+### 📁 **MODO 4: Archivo Directo**
+1. Abrir el Explorador de Archivos
+2. Ir a la carpeta del proyecto
+3. **Arrastrar** el archivo `index.html` al navegador web
+4. **O clic derecho** → "Abrir con" → Elegir navegador
+
+**Ventajas:** Sin servidor, ultra-rápido
+**Limitaciones:** Sin auto-recarga, posibles problemas de CORS
+
+## 🎮 Una Vez Ejecutado
+
+Todos los modos ofrecen las mismas funcionalidades:
+
+1. **Panel izquierdo**: Controles del simulador con tooltips técnicos
+2. **Panel central**: Diagrama geométrico del wing foil
+3. **Panel derecho**: KPIs con explicaciones detalladas
+4. **Controles**: Play/Pause y navegación temporal
+
+**💡 Tip:** Pasa el mouse sobre cualquier slider o KPI para ver las definiciones técnicas completas con unidades, rangos y significado físico.
+
+## 🔧 Solución de Problemas
+
+### Puerto ya en uso
+```bash
+# Cambiar puerto en server.js:
+const PORT = 3002; // o cualquier otro puerto disponible
+```
+
+### Live Server no funciona
+```bash
+# Limpiar caché de npm:
+npm cache clean --force
+npx live-server --port=8080
+```
+
+### Problemas de CORS
+- Usa Live Server o Node.js Server
+- Evita el modo "Archivo Directo"
+
+---
+
+**¡El simulador está listo para usar!** 🏄‍♂️✨

@@ -1,9 +1,357 @@
-// Simulador v23h7 — estable
-const $ = id => document.getElementById(id);
-function S(id){ const el=$(id); if(!el) throw new Error('#' + id + ' no encontrado'); return el; }
-const fmt=(x,d)=> {
-  if (x === undefined || x === null || isNaN(x)) return '—';
-  return (Math.abs(x)>=1000?x.toFixed(0):x.toFixed(d));
+// Definiciones técnicas de variables físicas
+// Incluye unidades, convenciones de medida y descripciones rigurosas
+const PHYSICAL_DEFINITIONS = {
+  // === INPUTS (Sliders) ===
+  v0: {
+    name: "Velocidad base V₀",
+    unit: "m/s",
+    description: "Velocidad media de la corriente relativa. V(t) = V₀ + A_V·sin(2πft)",
+    range: "2.0 - 6.0 m/s"
+  },
+  phi: {
+    name: "Ángulo de pitch base φ",
+    unit: "°",
+    description: "Ángulo de inclinación base de la tabla. Positivo cuando la proa está arriba (sentido antihorario desde eje horizontal). Convención aerodinámica estándar.",
+    range: "-10° - +15°"
+  },
+  theta0: {
+    name: "Ángulo de ataque base θ₀",
+    unit: "°",
+    description: "Ángulo base de la cuerda del ala. Positivo cuando el borde de ataque está arriba (sentido antihorario desde eje horizontal). Convención aerodinámica estándar.",
+    range: "-5° - +12°"
+  },
+  gamma0: {
+    name: "Ángulo de flujo base γ₀",
+    unit: "°",
+    description: "Ángulo base de la velocidad relativa del flujo. Positivo cuando el flujo viene desde arriba (sentido antihorario desde eje horizontal).",
+    range: "-15° - +10°"
+  },
+  S: {
+    name: "Superficie alar S",
+    unit: "m²",
+    description: "Área proyectada del ala del foil. Superficie efectiva para generar sustentación.",
+    range: "0.08 - 0.22 m²"
+  },
+  rho: {
+    name: "Densidad del agua ρ",
+    unit: "kg/m³",
+    description: "Densidad del fluido (agua). Afecta la sustentación y resistencia hidrodinámica.",
+    range: "950 - 1030 kg/m³"
+  },
+  mass: {
+    name: "Masa total",
+    unit: "kg",
+    description: "Masa total del sistema (rider + equipo). Afecta la dinámica y fuerzas gravitatorias.",
+    range: "55 - 110 kg"
+  },
+  LD: {
+    name: "Relación L/D",
+    unit: "adimensional",
+    description: "Relación entre sustentación y resistencia. Mayor valor indica mejor eficiencia aerodinámica.",
+    range: "4 - 12"
+  },
+  clslope: {
+    name: "Pendiente dCL/dα",
+    unit: "1/°",
+    description: "Derivada del coeficiente de sustentación respecto al ángulo de ataque. Medida en grados.",
+    range: "0.04 - 0.14 °⁻¹"
+  },
+  clmax: {
+    name: "CL máximo",
+    unit: "adimensional",
+    description: "Coeficiente de sustentación máximo antes de entrada en pérdida.",
+    range: "0.7 - 1.5"
+  },
+  stall: {
+    name: "Ángulo de pérdida α*",
+    unit: "°",
+    description: "Ángulo de ataque donde comienza la pérdida aerodinámica. Positivo según convención estándar.",
+    range: "6° - 16°"
+  },
+  freq: {
+    name: "Frecuencia de bombeo f",
+    unit: "Hz",
+    description: "Frecuencia de oscilación del sistema. Tc = 1/f es el período del ciclo.",
+    range: "0.6 - 2.5 Hz"
+  },
+  ampV: {
+    name: "Amplitud de velocidad A_V",
+    unit: "m/s",
+    description: "Amplitud de variación de la velocidad: V(t) = V₀ + A_V·sin(2πft)",
+    range: "0 - 1.2 m/s"
+  },
+  ampT: {
+    name: "Amplitud de θ A_θ",
+    unit: "°",
+    description: "Amplitud de variación del ángulo de ataque: θ(t) = θ₀ + A_θ·sin(2πft + φ_θ)",
+    range: "0° - 4°"
+  },
+  ampG: {
+    name: "Amplitud de γ A_γ",
+    unit: "°",
+    description: "Amplitud de variación del ángulo de flujo: γ(t) = γ₀ + A_γ·sin(2πft + φ_γ)",
+    range: "0° - 5°"
+  },
+  phaseT: {
+    name: "Fase de θ φ_θ",
+    unit: "°",
+    description: "Desfase de fase para θ(t). Ángulo en grados para el seno.",
+    range: "0° - 180°"
+  },
+  phaseG: {
+    name: "Fase de γ φ_γ",
+    unit: "°",
+    description: "Desfase de fase para γ(t). Ángulo en grados para el seno.",
+    range: "0° - 180°"
+  },
+  dtStep: {
+    name: "Paso de integración Δt",
+    unit: "s",
+    description: "Paso de tiempo para el integrador numérico. Afecta precisión y velocidad de simulación.",
+    range: "0.001 - 0.02 s"
+  },
+  lambda: {
+    name: "Reparto estático λ",
+    unit: "adimensional",
+    description: "Fracción de peso apoyada en el pie delantero. λ = F_delantero / Peso_total",
+    range: "0.3 - 0.7"
+  },
+  dstance: {
+    name: "Distancia entre pies d",
+    unit: "m",
+    description: "Distancia horizontal entre los puntos de apoyo de los pies.",
+    range: "0.4 - 0.9 m"
+  },
+  Af: {
+    name: "Amplitud delantera A_f",
+    unit: "N",
+    description: "Amplitud de fuerza adicional en el pie delantero. F_delantero(t) = λ·mg + A_f·sin(2πft + φ_f)",
+    range: "0 - 600 N"
+  },
+  Ab: {
+    name: "Amplitud trasera A_b",
+    unit: "N",
+    description: "Amplitud de fuerza adicional en el pie trasero. F_trasero(t) = (1-λ)·mg + A_b·sin(2πft + φ_b)",
+    range: "0 - 600 N"
+  },
+  phaseF: {
+    name: "Fase delantera φ_f",
+    unit: "°",
+    description: "Fase para la fuerza del pie delantero.",
+    range: "0° - 180°"
+  },
+  phaseB: {
+    name: "Fase trasera φ_b",
+    unit: "°",
+    description: "Fase para la fuerza del pie trasero.",
+    range: "0° - 180°"
+  },
+  Gtheta: {
+    name: "Ganancia θ G_θ",
+    unit: "°/(N·m)",
+    description: "Ganancia del ángulo de ataque respecto al momento del rider: θ_eff = θ₀ - G_θ·M_rider",
+    range: "0 - 0.03 °/(N·m)"
+  },
+  Kphi: {
+    name: "Ganancia φ K_φ",
+    unit: "°/(N·m)",
+    description: "Ganancia del ángulo φ respecto al momento del rider: φ_eff = φ₀ - K_φ·M_rider",
+    range: "0 - 0.15 °/(N·m)"
+  },
+  h0: {
+    name: "Altura inicial h₀",
+    unit: "m",
+    description: "Altura inicial del centro de presión. Negativo = bajo el agua. Positivo = sobre el agua.",
+    range: "-0.8 - +0.2 m"
+  },
+  cw: {
+    name: "Amortiguamiento vertical c_w",
+    unit: "N·s/m",
+    description: "Coeficiente de amortiguamiento vertical. F_amort = -c_w·v_vertical",
+    range: "0 - 400 N·s/m"
+  },
+  vscale: {
+    name: "Escala vertical",
+    unit: "px/m",
+    description: "Factor de escala para la dimensión vertical en el diagrama (píxeles por metro).",
+    range: "200 - 2000 px/m"
+  },
+  hscale: {
+    name: "Escala horizontal",
+    unit: "px/m",
+    description: "Factor de escala para longitudes horizontales en el diagrama (píxeles por metro).",
+    range: "60 - 240 px/m"
+  },
+  velscale: {
+    name: "Escala velocidad",
+    unit: "adimensional",
+    description: "Factor de escala para los vectores de velocidad en el diagrama.",
+    range: "0.1 - 6.0"
+  },
+  fuerzascale: {
+    name: "Escala fuerzas",
+    unit: "adimensional",
+    description: "Factor de escala para los vectores de fuerza en el diagrama.",
+    range: "0.1 - 6.0"
+  },
+  boardVolL: {
+    name: "Volumen tabla",
+    unit: "L",
+    description: "Volumen de la tabla para cálculo de empuje de Arquímedes.",
+    range: "40 - 140 L"
+  },
+  boardArea: {
+    name: "Superficie tabla",
+    unit: "m²",
+    description: "Área de la superficie mojada de la tabla para cálculo de empuje de Arquímedes.",
+    range: "0.40 - 1.20 m²"
+  },
+  mastH: {
+    name: "Altura mástil",
+    unit: "m",
+    description: "Altura desde la tabla hasta el foil.",
+    range: "0.60 - 1.20 m"
+  },
+  boardLen: {
+    name: "Longitud tabla",
+    unit: "m",
+    description: "Longitud total de la tabla para representación gráfica.",
+    range: "1.10 - 1.90 m"
+  },
+
+  // === OUTPUTS (KPIs) ===
+  alphaOut: {
+    name: "Ángulo de ataque α",
+    unit: "°",
+    description: "Ángulo entre la cuerda del ala y la velocidad relativa del flujo. Positivo cuando el borde de ataque está arriba (convención aerodinámica estándar). α = θ_eff - γ"
+  },
+  thetaEffOut: {
+    name: "Ángulo efectivo θ_eff",
+    unit: "°",
+    description: "Ángulo efectivo de la cuerda considerando el efecto del rider. θ_eff = θ₀ - G_θ·M_rider"
+  },
+  LOut: {
+    name: "Sustentación L",
+    unit: "N",
+    description: "Componente de sustentación hidrodinámica. L = ½·ρ·V²·S·CL"
+  },
+  LvOut: {
+    name: "Sustentación vertical L_v",
+    unit: "N",
+    description: "Componente vertical de la sustentación. L_v = L·cos(γ)"
+  },
+  FrOut: {
+    name: "Fuerza rider vertical",
+    unit: "N",
+    description: "Fuerza vertical total ejercida por el rider (pies delantero + trasero)."
+  },
+  DOut: {
+    name: "Resistencia D",
+    unit: "N",
+    description: "Componente de resistencia hidrodinámica. D = L / (L/D)"
+  },
+  ThOut: {
+    name: "Empuje horizontal",
+    unit: "N",
+    description: "Componente horizontal de la fuerza hidrodinámica. Th = L_x + D_x"
+  },
+  SupOut: {
+    name: "Porcentaje de soporte",
+    unit: "%",
+    description: "Porcentaje de soporte hidrodinámico: Sup = (L_v + F_Arquímedes) / mg × 100%"
+  },
+  MrOut: {
+    name: "Momento rider M_rider",
+    unit: "N·m",
+    description: "Momento ejercido por el rider alrededor del centro de presión. M_rider = (F_trasero - F_delantero) × d/2"
+  },
+  hOut: {
+    name: "Altura CoP h",
+    unit: "m",
+    description: "Altura del centro de presión relativa a la superficie del agua."
+  },
+  VTableOut: {
+    name: "Velocidad tabla V_tabla",
+    unit: "m/s",
+    description: "Velocidad total de la tabla: V_tabla = √(u² + w²)"
+  },
+  BOut: {
+    name: "Empuje Arquímedes",
+    unit: "N",
+    description: "Fuerza de empuje hidrostático: F_Arquímedes = ρ·g·V_submergido"
+  },
+  draftOut: {
+    name: "Calado tabla",
+    unit: "m",
+    description: "Profundidad de inmersión de la tabla en el agua."
+  },
+
+  // === VARIABLES INTERMEDIAS ===
+  gamma: {
+    name: "Ángulo de velocidad γ",
+    unit: "°",
+    description: "Ángulo de la velocidad relativa del flujo. γ = atan2(w, u). Positivo en sentido antihorario."
+  },
+  V: {
+    name: "Velocidad relativa V",
+    unit: "m/s",
+    description: "Magnitud de la velocidad relativa del flujo sobre el ala. V = √(u² + w²)"
+  },
+  CL: {
+    name: "Coeficiente de sustentación CL",
+    unit: "adimensional",
+    description: "Coeficiente de sustentación: CL = CL_slope × α (para α < α_stall)"
+  },
+  Lx: {
+    name: "Sustentación horizontal L_x",
+    unit: "N",
+    description: "Componente horizontal de la sustentación: L_x = -L·sin(γ)"
+  },
+  Ly: {
+    name: "Sustentación vertical L_y",
+    unit: "N",
+    description: "Componente vertical de la sustentación: L_y = L·cos(γ)"
+  },
+  Dx: {
+    name: "Resistencia horizontal D_x",
+    unit: "N",
+    description: "Componente horizontal de la resistencia: D_x = -D·cos(γ)"
+  },
+  Dy: {
+    name: "Resistencia vertical D_y",
+    unit: "N",
+    description: "Componente vertical de la resistencia: D_y = -D·sin(γ)"
+  },
+  Vert: {
+    name: "Fuerza vertical total",
+    unit: "N",
+    description: "Fuerza vertical hidrodinámica: Vert = L_y + D_y"
+  },
+  Ff: {
+    name: "Fuerza pie delantero",
+    unit: "N",
+    description: "Fuerza ejercida por el pie delantero: F_f = λ·mg + A_f·sin(2πft + φ_f)"
+  },
+  Fb: {
+    name: "Fuerza pie trasero",
+    unit: "N",
+    description: "Fuerza ejercida por el pie trasero: F_b = (1-λ)·mg + A_b·sin(2πft + φ_b)"
+  },
+  Mr: {
+    name: "Momento rider",
+    unit: "N·m",
+    description: "Momento del rider: M_r = (F_b - F_f) × d/2"
+  },
+  Fb_buoy: {
+    name: "Empuje Arquímedes",
+    unit: "N",
+    description: "Fuerza de flotación: F_b = ρ·g·V_submergido"
+  },
+  draft: {
+    name: "Calado",
+    unit: "m",
+    description: "Profundidad de inmersión del cuerpo en el fluido."
+  }
 };
 
 const sliders = ["v0","phi","theta0","gamma0","S","rho","mass","LD","clslope","clmax","stall",
@@ -21,6 +369,14 @@ const MAXC=100;
 const histAngles={alpha:[], theta:[]};
 const histForces={L:[], Th:[], Fr:[]};
 
+// Funciones auxiliares
+const $ = id => document.getElementById(id);
+function S(id){ const el=$(id); if(!el) throw new Error('#' + id + ' no encontrado'); return el; }
+const fmt=(x,d)=> {
+  if (x === undefined || x === null || isNaN(x)) return '—';
+  return (Math.abs(x)>=1000?x.toFixed(0):x.toFixed(d));
+};
+
 function endCyclePush(){
   if(cyc_acc.na>0){
     const a=cyc_acc.a/cyc_acc.na, th=cyc_acc.th/cyc_acc.na;
@@ -32,6 +388,42 @@ function endCyclePush(){
   }
   // No agregar valores por defecto cuando no hay datos - dejar arrays vacíos
   cyc_acc={na:0, a:0, th:0, L:0, Th:0, Fr:0};
+}
+
+function applyTechnicalDefinitions() {
+  // Aplicar definiciones a inputs (sliders)
+  Object.keys(PHYSICAL_DEFINITIONS).forEach(key => {
+    const element = document.getElementById(key);
+    if (element && PHYSICAL_DEFINITIONS[key]) {
+      const def = PHYSICAL_DEFINITIONS[key];
+      element.title = `${def.name} (${def.unit}). ${def.description} Rango: ${def.range}`;
+    }
+  });
+
+  // Aplicar definiciones a KPIs
+  const kpiMappings = {
+    alphaOut: 'alphaOut',
+    thetaEffOut: 'thetaEffOut',
+    LOut: 'LOut',
+    LvOut: 'LvOut',
+    FrOut: 'FrOut',
+    DOut: 'DOut',
+    ThOut: 'ThOut',
+    SupOut: 'SupOut',
+    MrOut: 'MrOut',
+    hOut: 'hOut',
+    VTableOut: 'VTableOut',
+    BOut: 'BOut',
+    draftOut: 'draftOut'
+  };
+
+  Object.keys(kpiMappings).forEach(kpiKey => {
+    const element = document.getElementById(kpiMappings[kpiKey]);
+    if (element && PHYSICAL_DEFINITIONS[kpiKey]) {
+      const def = PHYSICAL_DEFINITIONS[kpiKey];
+      element.title = `${def.name} (${def.unit}). ${def.description}`;
+    }
+  });
 }
 
 function bindUI(){
@@ -133,6 +525,9 @@ function bindUI(){
     playPauseButton.textContent = '▶ Play';
     playPauseButton.innerHTML = '▶ Play';
   }
+  
+  // Aplicar definiciones técnicas a todos los elementos
+  applyTechnicalDefinitions();
 }
 
 function P(){

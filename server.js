@@ -1,40 +1,64 @@
-// Simple Express server to serve the simulator and persist state to disk.
-// Run: npm install && node server.js
+// Simple HTTP server to serve the simulator
+// Run: node server.js
+const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const express = require('express');
-const app = express();
-const PORT = process.env.PORT || 3000;
-const STATE_FILE = path.join(__dirname, 'state.json');
+const url = require('url');
 
-app.use(express.json({limit:'200kb'}));
+const PORT = process.env.PORT || 3001;
 
-// CORS (optional - same origin expected, but keep simple)
-app.use((req,res,next)=>{res.setHeader('Access-Control-Allow-Origin','*');res.setHeader('Access-Control-Allow-Methods','GET,POST,OPTIONS');res.setHeader('Access-Control-Allow-Headers','Content-Type');if(req.method==='OPTIONS') return res.sendStatus(200); next();});
+const server = http.createServer((req, res) => {
+  const parsedUrl = url.parse(req.url, true);
+  let pathname = parsedUrl.pathname;
 
-app.get('/state', (req,res)=>{
-  fs.readFile(STATE_FILE,'utf8',(err,data)=>{
-    if(err){ return res.status(404).json({ok:false,error:'no_state'}); }
-    try{ const json=JSON.parse(data); return res.json({ok:true,data:json}); }
-    catch(e){ return res.status(500).json({ok:false,error:'parse_error'}); }
+  // Default to index.html
+  if (pathname === '/') {
+    pathname = '/index.html';
+  }
+
+  const filePath = path.join(__dirname, pathname);
+
+  // Check if file exists
+  fs.access(filePath, fs.constants.F_OK, (err) => {
+    if (err) {
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      res.end('File not found');
+      return;
+    }
+
+    // Read and serve the file
+    fs.readFile(filePath, (err, data) => {
+      if (err) {
+        res.writeHead(500, { 'Content-Type': 'text/plain' });
+        res.end('Internal server error');
+        return;
+      }
+
+      // Set content type based on file extension
+      const ext = path.extname(filePath);
+      let contentType = 'text/plain';
+      switch (ext) {
+        case '.html':
+          contentType = 'text/html';
+          break;
+        case '.js':
+          contentType = 'text/javascript';
+          break;
+        case '.css':
+          contentType = 'text/css';
+          break;
+        case '.json':
+          contentType = 'application/json';
+          break;
+      }
+
+      res.writeHead(200, { 'Content-Type': contentType });
+      res.end(data);
+    });
   });
 });
 
-app.post('/state', (req,res)=>{
-  const body = req.body || {};
-  if(typeof body !== 'object'){ return res.status(400).json({ok:false,error:'bad_body'}); }
-  // Add server timestamp
-  body.serverTs = Date.now();
-  fs.writeFile(STATE_FILE, JSON.stringify(body,null,2), 'utf8', err => {
-    if(err) return res.status(500).json({ok:false,error:'write_failed'});
-    res.json({ok:true,saved:true});
-  });
-});
-
-// Static files (after API routes so /state is not shadowed if file exists)
-app.use(express.static(__dirname));
-
-app.listen(PORT, ()=>{
-  console.log('\nSimulator server running on http://localhost:'+PORT+'\n');
-  console.log('Persistence file: '+STATE_FILE); 
+server.listen(PORT, () => {
+  console.log(`Server running at http://localhost:${PORT}`);
+  console.log(`Open your browser and go to: http://localhost:${PORT}`);
 });
