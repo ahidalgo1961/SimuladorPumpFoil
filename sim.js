@@ -356,7 +356,7 @@ const PHYSICAL_DEFINITIONS = {
 
 const sliders = ["v0","phi","theta0","gamma0","S","rho","mass","LD","clslope","clmax","stall",
  "freq","ampV","ampT","ampG","phaseT","phaseG","dtStep",
- "lambda","dstance","Af","Ab","phaseF","phaseB","Gtheta","Kphi","h0","cw","velscale","fuerzascale","hscale",
+ "lambda","dstance","Af","Ab","phaseF","phaseB","Gtheta","Kphi","h0","cw","vscale","velscale","fuerzascale","hscale",
  "boardVolL","boardArea","mastH","boardLen"];
 
 let t=0, T=1, playing=null;
@@ -553,9 +553,17 @@ function bindUI(){
       maxInput.value = defaultMax;
     }
     
-    // Actualizar inputs con valores actuales del slider al cargar
-    if (!minInput.value) minInput.value = slider.min;
-    if (!maxInput.value) maxInput.value = slider.max;
+    // Inicializar límites del slider con valores por defecto si no hay guardados
+    if (!minInput.value || minInput.value === '') {
+      minInput.value = defaultMin;
+    }
+    if (!maxInput.value || maxInput.value === '') {
+      maxInput.value = defaultMax;
+    }
+    
+    // Aplicar límites iniciales al slider
+    slider.min = minInput.value;
+    slider.max = maxInput.value;
   });
   
   ["showHorizon","showFeet","showArc","showLabels","phiFollow","showFlow","showChord","showLD","showTableVel","showAxesW","showAxesB","showWeight","showBuoy","showResultants"]
@@ -612,6 +620,7 @@ function labelRefresh(p){
   S("Gthv").textContent=p.Gtheta.toFixed(4); S("Kphiv").textContent=p.Kphi.toFixed(4);
   S("h0v").textContent=p.h0.toFixed(2); S("cwv").textContent=p.cw.toFixed(0);
   S("vscalev").textContent=p.vscale.toFixed(0); S("hscalev").textContent=p.hscale.toFixed(0);
+  S("velscalev").textContent=p.velscale.toFixed(1); S("fuerzascalev").textContent=p.fuerzascale.toFixed(1);
   S("volv").textContent=p.boardVolL.toFixed(0); S("areav").textContent=p.boardArea.toFixed(2);
   S("mastv").textContent=p.mastH.toFixed(2); S("Ltabv").textContent=p.boardLen.toFixed(2);
   S("dtv").textContent=p.dt.toFixed(3);

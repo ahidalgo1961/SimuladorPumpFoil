@@ -291,7 +291,7 @@
         <label title="Escala vertical (px/m). Factor de escala para la dimensión vertical en el diagrama (píxeles por metro).">escala vertical (px/m) <b id="vscalev"></b></label>
         <div class="slider-container">
           <input type="number" class="scale-input" step="20" value="200" title="Límite mínimo" id="vscaleMin">
-          <input id="vscale" type="range" min="200" max="2000" step="20" value="600">
+          <input id="vscale" type="range" step="20" value="600">
           <input type="number" class="scale-input" step="20" value="2000" title="Límite máximo" id="vscaleMax">
         </div>
       </div>
@@ -299,23 +299,23 @@
         <label title="Escala horizontal (px/m). Factor de escala para longitudes horizontales en el diagrama (píxeles por metro).">escala horizontal (px/m) <b id="hscalev"></b></label>
         <div class="slider-container">
           <input type="number" class="scale-input" step="5" value="60" title="Límite mínimo" id="hscaleMin">
-          <input id="hscale" type="range" min="60" max="240" step="5" value="110">
+          <input id="hscale" type="range" step="5" value="110">
           <input type="number" class="scale-input" step="5" value="240" title="Límite máximo" id="hscaleMax">
         </div>
       </div>
       <div class="scale-row">
-        <label style="font-size:9px;color:#444;">velocidad</label>
+        <label style="font-size:9px;color:#444;">escala velocidad <b id="velscalev"></b></label>
         <div class="slider-container">
           <input id="velscaleMin" type="number" step="0.1" value="0.1" class="scale-input" title="Límite mínimo">
-          <input id="velscale" type="range" min="0.1" max="6" step="0.1" value="1.8">
+          <input id="velscale" type="range" step="0.1" value="1.8">
           <input id="velscaleMax" type="number" step="0.1" value="6" class="scale-input" title="Límite máximo">
         </div>
       </div>
       <div class="scale-row">
-        <label style="font-size:9px;color:#444;">fuerzas</label>
+        <label style="font-size:9px;color:#444;">escala fuerzas <b id="fuerzascalev"></b></label>
         <div class="slider-container">
           <input id="fuerzascaleMin" type="number" step="0.1" value="0.1" class="scale-input" title="Límite mínimo">
-          <input id="fuerzascale" type="range" min="0.1" max="6" step="0.1" value="1.8">
+          <input id="fuerzascale" type="range" step="0.1" value="1.8">
           <input id="fuerzascaleMax" type="number" step="0.1" value="6" class="scale-input" title="Límite máximo">
         </div>
       </div>
