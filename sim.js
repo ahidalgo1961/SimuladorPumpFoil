@@ -519,6 +519,9 @@ function applyTechnicalDefinitions() {
 }
 
 function bindUI(){
+  const geometrySliders = ['foilOffsetX','foilOffsetZ','tailOffsetX','tailOffsetZ','mastH','boardLen'];
+  let needsGeometryUpdate = false;
+
   sliders.forEach(id=>{
     const el=S(id);
     el.addEventListener('input', updateAll, {passive:true});
@@ -528,8 +531,24 @@ function bindUI(){
     el.addEventListener('input', ()=>{
       try{ const obj=JSON.parse(localStorage.getItem(KEY)||'{}'); obj[id]=el.value; localStorage.setItem(KEY, JSON.stringify(obj)); }catch(e){}
     }, {passive:true});
-    try{ const obj=JSON.parse(localStorage.getItem(KEY)||'{}'); if(obj[id]!==undefined) el.value=obj[id]; }catch(e){}
+    // Cargar valor desde localStorage
+    try{
+      const obj=JSON.parse(localStorage.getItem(KEY)||'{}');
+      if(obj[id]!==undefined && obj[id] !== el.value) {
+        el.value=obj[id];
+        if(geometrySliders.includes(id)) {
+          needsGeometryUpdate = true;
+        }
+      }
+    }catch(e){console.error('Error cargando localStorage:', e);}
   });
+
+  // Actualización única para geometría después de cargar todos los valores
+  if(needsGeometryUpdate) {
+    setTimeout(() => {
+      updateAll();
+    }, 50);
+  }
   
   // Controles de límites para TODOS los sliders
   const allSliderLimits = [
@@ -577,6 +596,14 @@ function bindUI(){
     { sliderId: 'boardArea', minId: 'boardAreaMin', maxId: 'boardAreaMax', defaultMin: 0.40, defaultMax: 1.20 },
     { sliderId: 'mastH', minId: 'mastHMin', maxId: 'mastHMax', defaultMin: 0.60, defaultMax: 1.20 },
     { sliderId: 'boardLen', minId: 'boardLenMin', maxId: 'boardLenMax', defaultMin: 1.10, defaultMax: 1.90 },
+    
+    // Geometría del sistema
+    { sliderId: 'foilOffsetX', minId: 'foilOffsetXMin', maxId: 'foilOffsetXMax', defaultMin: 0.20, defaultMax: 0.50 },
+    { sliderId: 'foilOffsetZ', minId: 'foilOffsetZMin', maxId: 'foilOffsetZMax', defaultMin: 0.02, defaultMax: 0.10 },
+    { sliderId: 'tailOffsetX', minId: 'tailOffsetXMin', maxId: 'tailOffsetXMax', defaultMin: 0.40, defaultMax: 0.80 },
+    { sliderId: 'tailOffsetZ', minId: 'tailOffsetZMin', maxId: 'tailOffsetZMax', defaultMin: 0.00, defaultMax: 0.05 },
+    { sliderId: 'foilChord', minId: 'foilChordMin', maxId: 'foilChordMax', defaultMin: 0.15, defaultMax: 0.35 },
+    { sliderId: 'tailChord', minId: 'tailChordMin', maxId: 'tailChordMax', defaultMin: 0.10, defaultMax: 0.20 },
     
     // Sliders de escala
     { sliderId: 'velscale', minId: 'velscaleMin', maxId: 'velscaleMax', defaultMin: 0.1, defaultMax: 6 },
@@ -718,22 +745,24 @@ function bindUI(){
 }
 
 function P(){
-  return {
+  const params = {
     V0: getValue("v0", 3.5), phi0: getValue("phi", 0), theta0: getValue("theta0", 3), gamma0: getValue("gamma0", 0),
     S: getValue("S", 0.12), rho: getValue("rho", 1025), mass: getValue("mass", 75), LD: getValue("LD", 10),
     clslope: getValue("clslope", 0.08), clmax: getValue("clmax", 1.2), astall: getValue("stall", 15),
     freq: getValue("freq", 1.5), ampV: getValue("ampV", 0.5), ampT: getValue("ampT", 5), ampG: getValue("ampG", 5),
     phaseT: getValue("phaseT", 0), phaseG: getValue("phaseG", 180), dt: getValue("dtStep", 0.01),
     lambda: getValue("lambda", 0.5), d: getValue("dstance", 0.4), Af: getValue("Af", 100), Ab: getValue("Ab", 100),
-    phaseF: getValue("phaseF", 0), phaseB: getValue("phaseB", 180), Gtheta: getValue("Gtheta", 50), Kphi: getValue("Kphi", 0.1),
+    phaseF: getValue("phaseF", 0), phaseB: getValue("phaseB", 60), Gtheta: getValue("Gtheta", 0.004), Kphi: getValue("Kphi", 0.05),
     h0: getValue("h0", -0.2), cw: getValue("cw", 0.01), velscale: getValue("velscale", 1), vscale: getValue("vscale", 300), hscale: getValue("hscale", 80), fuerzascale: getValue("fuerzascale", 1),
-    boardVolL: getValue("boardVolL", 0.02), boardArea: getValue("boardArea", 0.8), mastH: getValue("mastH", 0.8), boardLen: getValue("boardLen", 1.3),
+    boardVolL: getValue("boardVolL", 0.02), boardArea: getValue("boardArea", 0.8), mastH: getValue("mastH", 0.85), boardLen: getValue("boardLen", 1.5),
     foilOffsetX: getValue("foilOffsetX", 0.3), foilOffsetZ: getValue("foilOffsetZ", 0.05), 
     tailOffsetX: getValue("tailOffsetX", 0.6), tailOffsetZ: getValue("tailOffsetZ", 0.02),
     foilChord: getValue("foilChord", 0.25), tailChord: getValue("tailChord", 0.15),
     tailArea: getValue("tailArea", 0.025), tailLength: getValue("tailLength", 0.6), tailIncidence: getValue("tailIncidence", 0),
-    show:{ horizon: getChecked("showHorizon", true), feet: getChecked("showFeet", true), arc: getChecked("showArc", true), labels: getChecked("showLabels", true), flow: getChecked("showFlow", true), chord: getChecked("showChord", true), LD: getChecked("showLD", true), tail: getChecked("showTail", true), tableVel: getChecked("showTableVel", true), phiFollow: getChecked("phiFollow", true), axesW: getChecked("showAxesW", false), axesB: getChecked("showAxesB", false), weight: getChecked("showWeight", false), buoy: getChecked("showBuoy", false), result: getChecked("showResultants", false), phiAngle: getChecked("showPhiAngle", true), geometry: getChecked("showGeometry", false) }
+    show:{ horizon: getChecked("showHorizon", true), feet: getChecked("showFeet", true), arc: getChecked("showArc", true), labels: getChecked("showLabels", true), flow: getChecked("showFlow", true), chord: getChecked("showChord", true), LD: getChecked("showLD", true), tail: getChecked("showTail", true), foil: getChecked("showFoil", true), tableVel: getChecked("showTableVel", true), phiFollow: getChecked("phiFollow", true), axesW: getChecked("showAxesW", false), axesB: getChecked("showAxesB", false), weight: getChecked("showWeight", false), buoy: getChecked("showBuoy", false), result: getChecked("showResultants", false), phiAngle: getChecked("showPhiAngle", true), geometry: getChecked("showGeometry", false) }
   };
+
+  return params;
 }
 
 function labelRefresh(p, inst = null){
@@ -889,7 +918,7 @@ function calculateEffectiveMomentOfInertia(p) {
   const I_foil = (1/12) * foilMass * (foilChord * foilChord + foilSpan * foilSpan);
   const I_tail = (1/12) * tailMass * (tailChord * tailChord + (p.tailOffsetX || 0.6) * (p.tailOffsetX || 0.6));
   
-  // Posiciones de cada componente en coordenadas físicas
+  // Posiciones en coordenadas LOCALES
   const boardX = 0, boardZ = 0;
   const foilX = p.foilOffsetX || 0.3;
   const foilZ = p.foilOffsetZ || 0.05;
@@ -906,39 +935,94 @@ function calculateEffectiveMomentOfInertia(p) {
   return Math.max(I_total, 0.5);
 }
 
-// Función para convertir coordenadas físicas a coordenadas de pantalla
-function physicalToScreen(physicalX, physicalZ, scale, cx, cy) {
-  // cx, cy son el centro de la pantalla
-  // physicalX, physicalZ son coordenadas físicas (x horizontal, z vertical positiva hacia arriba)
-  // En SVG: y crece hacia abajo, por eso el signo negativo para z
-  const screenX = cx + physicalX * scale;
-  const screenY = cy - physicalZ * scale;
-  return { screenX, screenY };
+// Función para convertir coordenadas locales de la tabla a coordenadas globales
+function localToGlobal(localX, localZ, phi, mastH, hscale, vscale, cx, cy) {
+  // phi en radianes
+  // localX: distancia horizontal desde el centro de la tabla (positivo = hacia adelante)
+  // localZ: distancia vertical desde la tabla (positivo = hacia arriba)
+  
+  // Dirección del mástil (desde tabla hacia arriba)
+  const mastDirX = -Math.sin(phi);
+  const mastDirY = -Math.cos(phi);
+  
+  // Posición base del extremo del mástil
+  const foilDistance = Math.min(200, mastH * hscale);
+  const baseX = cx + mastDirX * foilDistance;
+  const baseY = cy + mastDirY * foilDistance;
+  
+  // Convertir offsets locales a píxeles
+  const offsetXPx = localX * hscale;
+  const offsetZPx = localZ * vscale;
+  
+  // Dirección perpendicular al mástil (para offsetZ)
+  const perpDirX = Math.cos(phi);
+  const perpDirY = Math.sin(phi);
+  
+  // Aplicar transformación de coordenadas locales a globales
+  const globalX = baseX + mastDirX * offsetXPx + perpDirX * offsetZPx;
+  const globalY = baseY + mastDirY * offsetXPx + perpDirY * offsetZPx;
+  
+  return { x: globalX, y: globalY };
+}
+
+// Función para calcular el centro de masa del sistema
+function calculateCenterOfMass(p) {
+  // Masas de cada componente
+  const boardMass = p.mass * 0.7;
+  const foilMass = p.mass * 0.25;
+  const tailMass = p.mass * 0.05;
+  
+  // Posiciones en coordenadas LOCALES de la tabla
+  // Centro de la tabla: origen del sistema local
+  const boardX = 0, boardZ = 0;
+  
+  // Foil: offset desde el centro de la tabla
+  const foilX = p.foilOffsetX || 0.3;  // Distancia horizontal local
+  const foilZ = p.foilOffsetZ || 0.05; // Altura local sobre la tabla
+  
+  // Cola: offset relativo al foil
+  const tailX = foilX + (p.tailOffsetX || 0.6); // Distancia desde tabla hasta cola
+  const tailZ = foilZ + (p.tailOffsetZ || 0.02); // Altura relativa
+  
+  // Calcular posiciones de masa para cada componente
+  const totalMass = boardMass + foilMass + tailMass;
+  
+  // Centro de masa en coordenadas LOCALES
+  const cmX = (boardMass * boardX + foilMass * foilX + tailMass * tailX) / totalMass;
+  const cmZ = (boardMass * boardZ + foilMass * foilZ + tailMass * tailZ) / totalMass;
+  
+  return { x: cmX, z: cmZ };
 }
 
 // Función para dibujar la geometría del sistema (opcional, para visualización)
 function drawSystemGeometry(svg, p, scale, cx, cy) {
-  if (!p.show.geometry) return;  // Solo dibujar si está habilitado
+  // Dibujar geometría del sistema siempre (no solo cuando está habilitado el checkbox)
+  // if (!p.show.geometry) return;  // Comentado para que se dibuje siempre
   
+  // Calcular phi efectivo para la transformación (usar p.phi0 directamente ya que no tenemos acceso a inst)
+  const phiDeg = p.phi0 || 0;
+  const phi = phiDeg * Math.PI / 180;
+  
+  // Calcular posiciones usando coordenadas locales
   const cm = calculateCenterOfMass(p);
-  const cmScreen = physicalToScreen(cm.x, cm.z, scale, cx, cy);
+  const cmGlobal = localToGlobal(cm.x, cm.z, phi, p.mastH, p.hscale, p.vscale, cx, cy);
   
   // Dibujar centro de masa
   const cmCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-  cmCircle.setAttribute('cx', cmScreen.screenX);
-  cmCircle.setAttribute('cy', cmScreen.screenY);
-  cmCircle.setAttribute('r', '4');
+  cmCircle.setAttribute('cx', cmGlobal.x);
+  cmCircle.setAttribute('cy', cmGlobal.y);
+  cmCircle.setAttribute('r', Math.max(2, 4 * (scale / 600))); // Escalar el radio proporcionalmente
   cmCircle.setAttribute('fill', '#ff4444');
   cmCircle.setAttribute('stroke', '#000');
-  cmCircle.setAttribute('stroke-width', '1');
+  cmCircle.setAttribute('stroke-width', Math.max(0.5, 1 * (scale / 600))); // Escalar el ancho del borde
   svg.appendChild(cmCircle);
   
   // Etiqueta del centro de masa
   if (p.show.labels) {
     const cmText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    cmText.setAttribute('x', cmScreen.screenX + 8);
-    cmText.setAttribute('y', cmScreen.screenY - 8);
-    cmText.setAttribute('font-size', '10');
+    cmText.setAttribute('x', cmGlobal.x + 8);
+    cmText.setAttribute('y', cmGlobal.y - 8);
+    cmText.setAttribute('font-size', Math.max(6, 10 * (scale / 600))); // Escalar el tamaño de fuente
     cmText.setAttribute('fill', '#ff4444');
     cmText.setAttribute('font-weight', 'bold');
     cmText.textContent = 'CM';
@@ -946,14 +1030,11 @@ function drawSystemGeometry(svg, p, scale, cx, cy) {
   }
   
   // Líneas de referencia para mostrar posiciones relativas
-  if (p.show.geometry) {
-    const boardScreen = physicalToScreen(0, 0, scale, cx, cy);
-    const foilScreen = physicalToScreen(p.foilOffsetX || 0.3, p.foilOffsetZ || 0.05, scale, cx, cy);
-    const tailScreen = physicalToScreen(
-      (p.foilOffsetX || 0.3) + (p.tailOffsetX || 0.6),
-      (p.foilOffsetZ || 0.05) + (p.tailOffsetZ || 0.02),
-      scale, cx, cy
-    );
+  // if (p.show.geometry) {  // Comentado para que se dibuje siempre
+  if (true) {  // Siempre dibujar las líneas de referencia
+    const boardScreen = { screenX: cx, screenY: cy }; // Centro de la tabla
+    const foilScreen = localToGlobal(p.foilOffsetX || 0.3, p.foilOffsetZ || 0.05, phi, p.mastH, p.hscale, p.vscale, cx, cy);
+    const tailScreen = localToGlobal(p.tailOffsetX || 0.6, p.tailOffsetZ || 0.02, phi, p.mastH, p.hscale, p.vscale, cx, cy);
     
     // Líneas punteadas para mostrar posiciones
     const line = (x1, y1, x2, y2, color = '#666', dash = '2,2') => {
@@ -961,16 +1042,16 @@ function drawSystemGeometry(svg, p, scale, cx, cy) {
       l.setAttribute('x1', x1); l.setAttribute('y1', y1);
       l.setAttribute('x2', x2); l.setAttribute('y2', y2);
       l.setAttribute('stroke', color);
-      l.setAttribute('stroke-width', '1');
+      l.setAttribute('stroke-width', Math.max(0.5, 1 * (scale / 600))); // Escalar el ancho de línea
       l.setAttribute('stroke-dasharray', dash);
       svg.appendChild(l);
       return l;
     };
     
     // Líneas desde CM a cada componente
-    line(cmScreen.screenX, cmScreen.screenY, boardScreen.screenX, boardScreen.screenY, '#666');
-    line(cmScreen.screenX, cmScreen.screenY, foilScreen.screenX, foilScreen.screenY, '#2e7d32');
-    line(cmScreen.screenX, cmScreen.screenY, tailScreen.screenX, tailScreen.screenY, '#ff9800');
+    line(cmGlobal.x, cmGlobal.y, boardScreen.screenX, boardScreen.screenY, '#666');
+    line(cmGlobal.x, cmGlobal.y, foilScreen.x, foilScreen.y, '#2e7d32');
+    line(cmGlobal.x, cmGlobal.y, tailScreen.x, tailScreen.y, '#ff9800');
   }
 }
 
@@ -990,9 +1071,9 @@ function calculateCenterOfMass(p) {
   const foilX = p.foilOffsetX || 0.3;  // Distancia horizontal desde centro tabla
   const foilZ = p.foilOffsetZ || 0.05; // Altura sobre la tabla
   
-  // Cola: offset desde el foil
-  const tailX = foilX + (p.tailOffsetX || 0.6);
-  const tailZ = foilZ + (p.tailOffsetZ || 0.02);
+  // Cola: offset desde el centro de la tabla (independiente del foil)
+  const tailX = p.tailOffsetX || 0.6;  // Distancia horizontal desde centro tabla
+  const tailZ = p.tailOffsetZ || 0.02; // Altura sobre la tabla
   
   // Centro de masa: Σ(m_i * x_i) / Σ(m_i)
   const cmX = (boardMass * boardX + foilMass * foilX + tailMass * tailX) / totalMass;
@@ -1333,7 +1414,7 @@ function draw(instOpt){
   // Primero calcular la posición del ancla de la tabla (igual que en el dibujo)
   const phiDegCalc = p.show.phiFollow ? (p.phi0 - p.Kphi*inst.Mr) : p.phi0;
   const phiCalc = phiDegCalc * Math.PI / 180;
-  const foilDistanceCalc = Math.min(200, p.mastH * scale);
+  const foilDistanceCalc = Math.min(200, p.mastH * p.hscale);
   const xAnchorCalc = cx - Math.sin(phiCalc) * foilDistanceCalc;
   const yAnchorCalc = cy - Math.cos(phiCalc) * foilDistanceCalc;
   
@@ -1504,38 +1585,118 @@ function draw(instOpt){
   const tHat=[Math.cos(phi), Math.sin(phi)];
   const nHat=[-Math.sin(phi), Math.cos(phi)];
   
-  // Posición del foil considerando la rotación phi (siempre hacia arriba en el sistema local de la tabla)
-  const foilDistance = Math.min(200, p.mastH * scale); // Limitar distancia máxima del foil
-  const xAnchor = cx - Math.sin(phi) * foilDistance; // Componente horizontal considerando rotación
-  const yAnchor = cy - Math.cos(phi) * foilDistance; // Componente vertical considerando rotación
+  // Posición del foil usando coordenadas locales
+  const foilLocalX = (p.foilOffsetX || 0.3);  // Offset X en metros (local)
+  const foilLocalZ = (p.foilOffsetZ || 0.05); // Offset Z en metros (local)
+  const mastH = (p.mastH || 0.8); // Altura del mástil en metros
+  
+  // Usar localToGlobal para transformar coordenadas locales a globales
+  const foilGlobal = localToGlobal(foilLocalX, foilLocalZ, phi, mastH, p.hscale, p.vscale, cx, cy);
+  const xAnchor = foilGlobal.x;
+  const yAnchor = foilGlobal.y;
 
   // DEBUG: Mostrar posiciones calculadas
   console.log('DEBUG Tabla:', {
-    cx, cy, foilDistance, phi: phi*180/Math.PI,
+    cx, cy, phi: phi*180/Math.PI,
     xAnchor, yAnchor,
     Lb, scale: p.hscale
   });
 
   line(cx, cy, xAnchor, yAnchor, '#444', 3); text(xAnchor+6, yAnchor-6, 'Mástil H');
 
-  // Rectángulo tabla
+  // Dibujar el foil principal
+  if(p.show.foil && (p.S || 0) > 0){
+    const foilChordPx = (p.foilChord || 0.25) * p.hscale; // Ancho del foil proporcional a la cuerda
+    const foilSpanPx = Math.max(20, (p.S || 0.15) / (p.foilChord || 0.25) * 50); // Alto proporcional al área/cuerda
+
+    // El foil se dibuja perpendicular al mástil (horizontal en el sistema local de la tabla)
+    const foilLeftX = xAnchor - (foilChordPx/2) * Math.cos(phi);
+    const foilLeftY = yAnchor - (foilChordPx/2) * Math.sin(phi);
+    const foilRightX = xAnchor + (foilChordPx/2) * Math.cos(phi);
+    const foilRightY = yAnchor + (foilChordPx/2) * Math.sin(phi);
+
+    // Dibujar el perfil del foil como un rectángulo
+    const foilRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    foilRect.setAttribute('x', foilLeftX - foilSpanPx/2);
+    foilRect.setAttribute('y', foilLeftY - 2);
+    foilRect.setAttribute('width', foilChordPx);
+    foilRect.setAttribute('height', foilSpanPx);
+    foilRect.setAttribute('fill', '#2196f3'); // Azul más vibrante
+    foilRect.setAttribute('stroke', '#0d47a1');
+    foilRect.setAttribute('stroke-width', '2');
+    foilRect.setAttribute('transform', `rotate(${-phi*180/Math.PI} ${xAnchor} ${yAnchor})`);
+    
+    // Calcular posiciones físicas correctas para el tooltip
+    const foilX_physical = (xAnchor - wpx*0.50) / p.vscale;
+    const foilZ_physical = (hpx*0.62 - yAnchor) / p.vscale;
+    
+    // Agregar tooltip usando elemento <title> en SVG
+    const foilTitle = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+    foilTitle.textContent = `Foil Principal
+Tamaño: ${p.foilChord?.toFixed(3) || 0.25} m × ${(p.S / p.foilChord)?.toFixed(3) || 0.6} m
+Posición: X=${foilX_physical?.toFixed(3)} m, Y=0 m, Z=${foilZ_physical?.toFixed(3)} m
+Área: ${(p.S || 0.15)?.toFixed(3)} m²`;
+    foilRect.appendChild(foilTitle);
+    
+    svg.appendChild(foilRect);
+
+    // Círculo en el centro geométrico del foil
+    const foilCenterX = xAnchor;
+    const foilCenterY = yAnchor;
+    const foilCenterCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    foilCenterCircle.setAttribute('cx', foilCenterX);
+    foilCenterCircle.setAttribute('cy', foilCenterY);
+    foilCenterCircle.setAttribute('r', Math.max(3, 6 * (p.vscale / 600)));
+    foilCenterCircle.setAttribute('fill', '#2196f3');
+    foilCenterCircle.setAttribute('stroke', '#ffffff');
+    foilCenterCircle.setAttribute('stroke-width', Math.max(1, 2 * (p.vscale / 600)));
+    svg.appendChild(foilCenterCircle);
+
+    text(xAnchor + foilChordPx/2 + 6, yAnchor, 'Foil');
+  }
+
+  // Rectángulo tabla - SIEMPRE centrado en (cx, cy), punto de referencia fijo
   const Vb = Math.max(0, p.boardVolL/1000);
   const Ab = Math.max(1e-6, p.boardArea);
   const tb = Math.min(1.0, Vb/Ab);
   const Tb = Math.max(4, tb * scale);
   const hx = (Lb/2)*tHat[0], hy=(Lb/2)*tHat[1];
   const nx = (Tb/2)*nHat[0], ny=(Tb/2)*nHat[1];
-  const p1=[xAnchor - hx - nx, yAnchor - hy - ny];
-  const p2=[xAnchor + hx - nx, yAnchor + hy - ny];
-  const p3=[xAnchor + hx + nx, yAnchor + hy + ny];
-  const p4=[xAnchor - hx + nx, yAnchor - hy + ny];
+  // La tabla siempre se centra en (cx, cy), no en (xAnchor, yAnchor)
+  const p1=[cx - hx - nx, cy - hy - ny];
+  const p2=[cx + hx - nx, cy + hy - ny];
+  const p3=[cx + hx + nx, cy + hy + ny];
+  const p4=[cx - hx + nx, cy - hy + ny];
   const boardPoly=[p1,p2,p3,p4];
 
   const poly = document.createElementNS('http://www.w3.org/2000/svg','polygon');
   poly.setAttribute('points', boardPoly.map(p=>`${p[0]},${p[1]}`).join(' '));
-  poly.setAttribute('fill', '#ddd'); poly.setAttribute('stroke', '#777'); poly.setAttribute('stroke-width', '1.2');
+  poly.setAttribute('fill', '#795548'); // Marrón más distintivo
+  poly.setAttribute('stroke', '#3e2723');
+  poly.setAttribute('stroke-width', '1.2');
+  
+  // Agregar tooltip usando elemento <title> en SVG
+  const boardTitle = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+  boardTitle.textContent = `Tabla
+Tamaño: ${(p.boardLen || 1.4)?.toFixed(3)} m × ${(p.boardArea / p.boardLen)?.toFixed(3) || 0.4} m
+Posición: X=${((xAnchor - wpx*0.50) / p.vscale)?.toFixed(3)} m, Y=0 m, Z=${((hpx*0.62 - yAnchor) / p.vscale)?.toFixed(3)} m
+Área: ${(p.boardArea || 0.4)?.toFixed(3)} m²
+Volumen: ${(p.boardVolL / 1000)?.toFixed(3) || 0.04} m³`;
+  poly.appendChild(boardTitle);
+  
   svg.appendChild(poly);
-  text(xAnchor + hx + 8, yAnchor + hy, 'Tabla (φ)');
+
+  // Círculo en el centro geométrico de la tabla (cx, cy) - punto de referencia fijo
+  const boardCenterCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  boardCenterCircle.setAttribute('cx', cx);
+  boardCenterCircle.setAttribute('cy', cy);
+  boardCenterCircle.setAttribute('r', Math.max(3, 6 * (p.vscale / 600)));
+  boardCenterCircle.setAttribute('fill', '#795548');
+  boardCenterCircle.setAttribute('stroke', '#ffffff');
+  boardCenterCircle.setAttribute('stroke-width', Math.max(1, 2 * (p.vscale / 600)));
+  svg.appendChild(boardCenterCircle);
+
+  text(cx + hx + 8, cy + hy, 'Tabla (φ)');
 
   // Línea de referencia del ángulo φ (horizontal desde el centro de la tabla)
   if(p.show.phiAngle){
@@ -1673,8 +1834,9 @@ function draw(instOpt){
   if(p.show.chord){
     // Para acoplamiento rígido: ángulo efectivo = phi (tabla) + theta (foil)
     const effectiveAngle = phi + inst.theta_eff * Math.PI/180;
-    const cxa=cx-(50)*Math.cos(effectiveAngle), cya=cy-(50)*Math.sin(effectiveAngle);
-    const cxb=cx+(50)*Math.cos(effectiveAngle), cyb=cy+(50)*Math.sin(effectiveAngle);
+    // La cuerda debe salir del centro del foil, no del centro de la tabla
+    const cxa=xAnchor-(50)*Math.cos(effectiveAngle), cya=yAnchor-(50)*Math.sin(effectiveAngle);
+    const cxb=xAnchor+(50)*Math.cos(effectiveAngle), cyb=yAnchor+(50)*Math.sin(effectiveAngle);
     line(cxa,cya,cxb,cyb,'#000',4); 
     text(cxb+6,cyb,`Cuerda (φ+θ = ${(phi*180/Math.PI + inst.theta_eff).toFixed(1)}°)`);
   }
@@ -1710,9 +1872,9 @@ function draw(instOpt){
     const g = inst.gamma*Math.PI/180;
     const lhat = [Math.cos(g-Math.PI/2), Math.sin(g-Math.PI/2)];  // ← Corregido: -90° en lugar de +90°
     const dhat = [Math.cos(g+Math.PI),   Math.sin(g+Math.PI)  ];
-    arrow2(cx, cy, cx + Llen*lhat[0], cy + Llen*lhat[1], '#2e7d32', 2.5,
+    arrow2(xAnchor, yAnchor, xAnchor + Llen*lhat[0], yAnchor + Llen*lhat[1], '#2e7d32', 2.5,
            `Fuerza de sustentación (Lift): ${inst.L?.toFixed(0) || 0} N\nComponente perpendicular al flujo que mantiene el foil en el aire`);
-    arrow2(cx, cy, cx + Dlen*dhat[0], cy + Dlen*dhat[1], '#ad8b00', 2.5,
+    arrow2(xAnchor, yAnchor, xAnchor + Dlen*dhat[0], yAnchor + Dlen*dhat[1], '#ad8b00', 2.5,
            `Fuerza de arrastre (Drag): ${inst.D?.toFixed(0) || 0} N\nComponente paralela al flujo que se opone al movimiento`);
   }
 
@@ -1721,21 +1883,56 @@ function draw(instOpt){
     const tailScale = p.hscale || 110; // Escala para dibujar la cola
     const tailLengthPx = (p.tailLength || 0.6) * tailScale;
     
-    // Posición del centro de la cola (detrás del foil principal, considerando rotación phi)
-    // La cola está en la dirección opuesta al foil desde el centro de la tabla
-    const tailCx = cx + Math.sin(phi) * tailLengthPx; // Componente horizontal considerando rotación
-    const tailCy = cy + Math.cos(phi) * tailLengthPx; // Componente vertical considerando rotación
+    // Posición de la cola usando coordenadas locales
+    const tailLocalX = (p.tailOffsetX || 0.6);  // Offset X en metros (local)
+    const tailLocalZ = (p.tailOffsetZ || 0.02); // Offset Z en metros (local)
     
-    // Dibujar la geometría de la cola (línea horizontal en el sistema local de la tabla)
-    const tailWidth = Math.max(20, (p.tailArea || 0.025) * 1000); // Ancho proporcional al área
+    // Usar localToGlobal para transformar coordenadas locales a globales
+    const tailGlobal = localToGlobal(tailLocalX, tailLocalZ, phi, mastH, p.hscale, p.vscale, cx, cy);
+    const tailCx = tailGlobal.x;
+    const tailCy = tailGlobal.y;
+    
+    // Dibujar la geometría de la cola usando la cuerda
+    const tailChordPx = (p.tailChord || 0.15) * p.hscale; // Ancho proporcional a la cuerda
+    const tailSpanPx = Math.max(15, (p.tailArea || 0.025) / (p.tailChord || 0.15) * 30); // Alto proporcional al área/cuerda
     
     // La cola también debe rotar con phi
-    const tailLeftX = tailCx - (tailWidth/2) * Math.cos(phi);
-    const tailLeftY = tailCy - (tailWidth/2) * Math.sin(phi);
-    const tailRightX = tailCx + (tailWidth/2) * Math.cos(phi);
-    const tailRightY = tailCy + (tailWidth/2) * Math.sin(phi);
+    const tailLeftX = tailCx - (tailChordPx/2) * Math.cos(phi);
+    const tailLeftY = tailCy - (tailChordPx/2) * Math.sin(phi);
+    const tailRightX = tailCx + (tailChordPx/2) * Math.cos(phi);
+    const tailRightY = tailCy + (tailChordPx/2) * Math.sin(phi);
     
-    line(tailLeftX, tailLeftY, tailRightX, tailRightY, '#666', 3);
+    // Dibujar el perfil de la cola como un rectángulo
+    const tailRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    tailRect.setAttribute('x', tailLeftX - tailSpanPx/2);
+    tailRect.setAttribute('y', tailLeftY - 2);
+    tailRect.setAttribute('width', tailChordPx);
+    tailRect.setAttribute('height', tailSpanPx);
+    tailRect.setAttribute('fill', '#ff5722'); // Naranja más vibrante
+    tailRect.setAttribute('stroke', '#bf360c');
+    tailRect.setAttribute('stroke-width', '2');
+    tailRect.setAttribute('transform', `rotate(${-phi*180/Math.PI} ${tailCx} ${tailCy})`);
+    
+    // Agregar tooltip usando elemento <title> en SVG
+    const tailTitle = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+    tailTitle.textContent = `Cola del Foil
+Tamaño: ${p.tailChord?.toFixed(3) || 0.15} m × ${(p.tailArea / p.tailChord)?.toFixed(3) || 0.17} m
+Posición: X=${((tailCx - wpx*0.50) / p.vscale)?.toFixed(3)} m, Y=0 m, Z=${((hpx*0.62 - tailCy) / p.vscale)?.toFixed(3)} m
+Área: ${(p.tailArea || 0.025)?.toFixed(3)} m²`;
+    tailRect.appendChild(tailTitle);
+    
+    svg.appendChild(tailRect);
+
+    // Círculo en el centro geométrico de la cola
+    const tailCenterCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    tailCenterCircle.setAttribute('cx', tailCx);
+    tailCenterCircle.setAttribute('cy', tailCy);
+    tailCenterCircle.setAttribute('r', Math.max(3, 6 * (p.vscale / 600)));
+    tailCenterCircle.setAttribute('fill', '#ff5722');
+    tailCenterCircle.setAttribute('stroke', '#ffffff');
+    tailCenterCircle.setAttribute('stroke-width', Math.max(1, 2 * (p.vscale / 600)));
+    svg.appendChild(tailCenterCircle);
+    
     text(tailRightX + 6, tailRightY, 'Cola');
     
     // Dibujar línea de conexión entre foil y cola
@@ -1792,7 +1989,7 @@ function draw(instOpt){
   }
   if(p.show.buoy && B.draft>0){
     const k=(40/(p.mass*9.81))*(p.fuerzascale||1);
-    arrow2(cx, cy - p.mastH*scale, cx, cy - p.mastH*scale - Math.max(12,k*B.Fb), '#0a6', 2.5,
+    arrow2(xAnchor, yAnchor, xAnchor, yAnchor - Math.max(12,k*B.Fb), '#0a6', 2.5,
            `Empuje de Arquímedes: ${B.Fb?.toFixed(0) || 0} N\nFuerza de flotabilidad debida al volumen sumergido de la tabla`);
   }
   if(p.show.result){
@@ -1805,11 +2002,8 @@ function draw(instOpt){
            `Fuerza horizontal resultante: ${inst.Th?.toFixed(0) || 0} N\nEmpuje neto horizontal (propulsión - arrastre)`);
   }
 
-  // Dibujar leyenda de colores
-  const isStallingLegend = inst && inst.alpha ? inst.alpha > p.astall : false;
-  const currentAlphaLegend = inst && inst.alpha ? inst.alpha : 0;
-  const stallAngleValue = p.astall || 15;
-  drawLegend(svg, wpx, hpx, horizonY, pan.x, isStallingLegend, currentAlphaLegend, stallAngleValue);
+  // Dibujar geometría del sistema (centro de masa, posiciones relativas)
+  drawSystemGeometry(svg, p, scale, cx, cy);
 
   refreshCharts();
   } catch (error) {
@@ -1955,4 +2149,11 @@ function testCharts() {
   refreshCharts();
 }
 
-window.addEventListener('DOMContentLoaded', ()=>{ bindUI(); resetState(); });
+window.addEventListener('DOMContentLoaded', ()=>{
+  bindUI();
+  resetState();
+  // Forzar actualización completa después de inicialización
+  setTimeout(() => {
+    updateAll();
+  }, 100);
+});

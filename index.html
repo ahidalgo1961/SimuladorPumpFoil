@@ -9,7 +9,7 @@
     body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;margin:0;background:#fafafa;color:#111}
     .wrap{display:grid;grid-template-columns: var(--left-w) 1fr var(--right-w); min-height:100vh;}
     .col{padding:10px 12px}
-    .left{background:#fff;border-right:1px solid #e6e6e6}
+    .left{background:#fff;border-right:1px solid #e6e6e6;max-height:80vh;overflow-y:auto}
     .center{background:#fff}
     .right{background:#fff;border-left:1px solid #e6e6e6}
     h1{font-size:16px;margin:6px 0 8px}
@@ -453,6 +453,7 @@
       <label><input id="showFlow" type="checkbox" checked> Mostrar vector de flujo (γ)</label>
       <label><input id="showChord" type="checkbox" checked> Mostrar cuerda (θ_eff)</label>
       <label><input id="showLD" type="checkbox" checked> Mostrar vectores L/D</label>
+      <label><input id="showFoil" type="checkbox" checked> Mostrar foil principal</label>
       <label><input id="showTail" type="checkbox" checked> Mostrar cola del foil</label>
       <label><input id="showTableVel" type="checkbox" checked> Mostrar velocidad tabla</label>
       <label><input id="showAxesW" type="checkbox" checked> Ejes globales W</label>
@@ -485,7 +486,6 @@
       <div class="kpi"><div class="h" title="Posición Y del centro geométrico de la tabla (m). Altura del centro de presión en el sistema de referencia global.">Y_tabla (m)</div><div class="v" id="tableY" style="color:#ff6600">—</div></div>
       <div class="kpi"><div class="h" title="Posición Z del centro geométrico de la tabla (m). Coordenada de profundidad en el sistema de referencia global.">Z_tabla (m)</div><div class="v" id="tableZ" style="color:#ff6600">—</div></div>
     </div>
-    <h1>Histórico</h1>
     <div class="chartbox"><svg id="chartAngles"></svg></div>
     <div class="chartbox"><svg id="chartForces"></svg></div>
   </div>
