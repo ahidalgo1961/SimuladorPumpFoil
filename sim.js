@@ -2233,8 +2233,8 @@ Volumen: ${(p.boardVolL / 1000)?.toFixed(3) || 0.04} m³`;
     const sternY = yAnchor - (Lb/2)*tHat[1];
     // Calcular coordenadas físicas globales del origen B (popa de la tabla)
     const sternGlobal = localToGlobal(0, 0, phi, p.mastH, p.hscale, p.vscale, cx, cy);
-    arrow2(sternX,sternY, sternX+32*tHat[0], sternY+32*tHat[1], '#000',1.6, `Eje X local de la tabla (tangencial)\nSistema de coordenadas solidario a la tabla\nOrigen B: (${sternGlobal.globalX.toFixed(1)}, ${sternGlobal.globalY.toFixed(1)})`); text(sternX+32*tHat[0]+4, sternY+32*tHat[1]+4, 'x_b');
-    arrow2(sternX,sternY, sternX+32*nHat[0], sternY+32*nHat[1], '#000',1.6, `Eje Y local de la tabla (normal)\nSistema de coordenadas solidario a la tabla\nOrigen B: (${sternGlobal.globalX.toFixed(1)}, ${sternGlobal.globalY.toFixed(1)})`); text(sternX+32*nHat[0]+4, sternY+32*nHat[1]+4, 'y_b');
+    arrow2(sternX,sternY, sternX+32*tHat[0], sternY+32*tHat[1], '#000',1.6, `Eje X local de la tabla (tangencial)\nSistema de coordenadas solidario a la tabla\nOrigen B: (${sternGlobal.x.toFixed(1)}, ${sternGlobal.y.toFixed(1)})`); text(sternX+32*tHat[0]+4, sternY+32*tHat[1]+4, 'x_b');
+    arrow2(sternX,sternY, sternX+32*nHat[0], sternY+32*nHat[1], '#000',1.6, `Eje Y local de la tabla (normal)\nSistema de coordenadas solidario a la tabla\nOrigen B: (${sternGlobal.x.toFixed(1)}, ${sternGlobal.y.toFixed(1)})`); text(sternX+32*nHat[0]+4, sternY+32*nHat[1]+4, 'y_b');
     const cB=document.createElementNS('http://www.w3.org/2000/svg','circle'); cB.setAttribute('cx',sternX); cB.setAttribute('cy',sternY); cB.setAttribute('r','3'); cB.setAttribute('fill','#000'); svg.appendChild(cB);
     text(sternX-14, sternY-8, 'B(0,0)');
   }
@@ -2249,12 +2249,12 @@ Volumen: ${(p.boardVolL / 1000)?.toFixed(3) || 0.04} m³`;
 
     // Eje X local del foil (horizontal, distancia desde el centro del foil)
     arrow2(foilOriginX, foilOriginY, foilOriginX + 32, foilOriginY, '#228B22', 1.6,
-           `Eje X local del foil (horizontal)\nSistema de coordenadas centrado en el foil\nX = distancia horizontal desde el centro del foil\nOrigen F: (${foilGlobal.globalX.toFixed(1)}, ${foilGlobal.globalY.toFixed(1)})`);
+           `Eje X local del foil (horizontal)\nSistema de coordenadas centrado en el foil\nX = distancia horizontal desde el centro del foil\nOrigen F: (${foilGlobal.x.toFixed(1)}, ${foilGlobal.y.toFixed(1)})`);
     text(foilOriginX + 36, foilOriginY + 4, 'x_f');
 
     // Eje Z local del foil (vertical, profundidad/altura)
     arrow2(foilOriginX, foilOriginY, foilOriginX, foilOriginY - 32, '#228B22', 1.6,
-           `Eje Z local del foil (vertical)\nSistema de coordenadas centrado en el foil\nZ = profundidad/altura relativa al foil\nOrigen F: (${foilGlobal.globalX.toFixed(1)}, ${foilGlobal.globalY.toFixed(1)})`);
+           `Eje Z local del foil (vertical)\nSistema de coordenadas centrado en el foil\nZ = profundidad/altura relativa al foil\nOrigen F: (${foilGlobal.x.toFixed(1)}, ${foilGlobal.y.toFixed(1)})`);
     text(foilOriginX - 8, foilOriginY - 36, 'z_f');
 
     // Punto de origen del sistema F
@@ -2485,13 +2485,13 @@ Sistema de coordenadas: F (foil local) - centrado en el foil`;
       z: (p.foilOffsetZ || 0.05) + (p.tailOffsetZ || 0.02)
     };
     const tailScreen = localToGlobal(tailLocal.x, tailLocal.z, phi_local, p.mastH || 0.8, p.hscale || 80, p.vscale || 300, cx, cy);
-    if (!isNaN(tailScreen.globalX) && !isNaN(tailScreen.globalY)) {
-      arrow2(tailScreen.globalX, tailScreen.globalY,
-             tailScreen.globalX, tailScreen.globalY + tailArrowLength,
+    if (!isNaN(tailScreen.x) && !isNaN(tailScreen.y)) {
+      arrow2(tailScreen.x, tailScreen.y,
+             tailScreen.x, tailScreen.y + tailArrowLength,
              '#228B22', 2.0,
              `Peso cola: ${tailWeight.toFixed(1)} N\nMasa: ${(p.tailMass || 0.5).toFixed(1)} kg`);
       // Dibujar indicador de centro de rotación de la cola
-      drawCenterIndicator(tailScreen.globalX, tailScreen.globalY, '#228B22', scale, 'Centro Rotación Cola', tailLocal);
+      drawCenterIndicator(tailScreen.x, tailScreen.y, '#228B22', scale, 'Centro Rotación Cola', tailLocal);
     }
   }
 

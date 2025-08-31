@@ -25,11 +25,11 @@ function testGeometryInvariance() {
 
     console.log(`φ=${phi}°:`, {
       cmLocal: {x: cm.x.toFixed(3), z: cm.z.toFixed(3)},
-      cmGlobal: {x: cmGlobal.globalX.toFixed(1), y: cmGlobal.globalY.toFixed(1)},
+      cmGlobal: {x: cmGlobal.x.toFixed(1), y: cmGlobal.y.toFixed(1)},
       foilLocal: {x: p.foilOffsetX.toFixed(3), z: p.foilOffsetZ.toFixed(3)},
-      foilGlobal: {x: foilGlobal.globalX.toFixed(1), y: foilGlobal.globalY.toFixed(1)},
+      foilGlobal: {x: foilGlobal.x.toFixed(1), y: foilGlobal.y.toFixed(1)},
       tailLocal: {x: (p.foilOffsetX + p.tailOffsetX).toFixed(3), z: (p.foilOffsetZ + p.tailOffsetZ).toFixed(3)},
-      tailGlobal: {x: tailGlobal.globalX.toFixed(1), y: tailGlobal.globalY.toFixed(1)}
+      tailGlobal: {x: tailGlobal.x.toFixed(1), y: tailGlobal.y.toFixed(1)}
     });
 
     // Restaurar valor original
