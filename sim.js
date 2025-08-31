@@ -210,25 +210,25 @@ const PHYSICAL_DEFINITIONS = {
     name: "Escala vertical",
     unit: "px/m",
     description: "Factor de escala para la dimensión vertical en el diagrama (píxeles por metro).",
-    range: "200 - 2000 px/m"
+    range: "200 - 4000 px/m"
   },
   hscale: {
     name: "Escala horizontal",
     unit: "px/m",
     description: "Factor de escala para longitudes horizontales en el diagrama (píxeles por metro).",
-    range: "60 - 240 px/m"
+    range: "60 - 480 px/m"
   },
   velscale: {
     name: "Escala velocidad",
     unit: "adimensional",
     description: "Factor de escala para los vectores de velocidad en el diagrama.",
-    range: "0.1 - 6.0"
+    range: "0.1 - 12.0"
   },
   fuerzascale: {
     name: "Escala fuerzas",
     unit: "adimensional",
     description: "Factor de escala para los vectores de fuerza en el diagrama.",
-    range: "0.1 - 6.0"
+    range: "0.1 - 12.0"
   },
   boardVolL: {
     name: "Volumen tabla",
@@ -447,9 +447,46 @@ const sliders = ["v0","phi","theta0","gamma0","S","tailArea","tailLength","tailI
  "boardVolL","boardArea","mastH","boardLen",
  "foilOffsetX","foilOffsetZ","tailOffsetX","tailOffsetZ","foilChord","tailChord"];
 
+// Event listener global para debugging de mousemove
+document.addEventListener('mousemove', (event) => {
+  // console.log('🌍 MOUSE MOVE GLOBAL:', {
+  //   target: event.target.tagName + (event.target.id ? '#' + event.target.id : ''),
+  //   clientX: event.clientX,
+  //   clientY: event.clientY,
+  //   overSVG: event.target.tagName === 'svg' || event.target.closest('svg') !== null
+  // });
+  
+  // Investigar elementos en la posición del mouse
+  const elementsAtPoint = document.elementsFromPoint(event.clientX, event.clientY);
+  // console.log('📋 ELEMENTOS EN POSICIÓN MOUSE:', elementsAtPoint.map(el => 
+  //   el.tagName + (el.id ? '#' + el.id : '') + (el.className ? '.' + el.className : '')
+  // ));
+  
+  // Buscar SVG específicamente
+  const svgAtPoint = elementsAtPoint.find(el => el.tagName === 'svg' || el.tagName === 'SVG');
+  // if (svgAtPoint) {
+  //   console.log('🎯 SVG ENCONTRADO EN POSICIÓN:', svgAtPoint.id || 'sin ID');
+  // } else {
+  //   console.log('❌ NO HAY SVG EN POSICIÓN DEL MOUSE');
+  // }
+}, true); // Usar capture phase
+
 let t=0, T=1, playing=null;
 let h=0, wv=0;        // heave (m, +arriba) y velocidad vertical
 let pan={x:0,y:0};
+
+// Variables para medición de distancias
+let measurementPoints = [];
+let measurementLine = null;
+let measurementText = null;
+let measurementTextBg = null;
+let measurementMarkers = [];
+let measurementTimeout = null;
+let markerTimeout = null;
+let measurementInstructionsShown = false;
+let mouseTrackingActive = false;
+let mouseDistanceText = null;
+let mouseDistanceTextBg = null;
 
 // Histórico (últimos 100 ciclos: medias por ciclo)
 let cyc_acc = {na:0, a:0, th:0, L:0, Th:0, Fr:0};
@@ -478,9 +515,77 @@ function getValue(id, defaultValue = 0) {
   const el = $(id); 
   return el ? +el.value : defaultValue; 
 }
-function getChecked(id, defaultValue = false) { 
-  const el = $(id); 
-  return el ? el.checked : defaultValue; 
+function getChecked(id, defaultValue = false) {
+  const KEY='wf_persist_v23h7';
+  try {
+    const obj = JSON.parse(localStorage.getItem(KEY) || '{}');
+    if (obj[id] !== undefined) {
+      return obj[id];
+    }
+  } catch(e) {
+    console.error('Error leyendo checkbox desde localStorage:', e);
+  }
+
+  // Si no hay valor en localStorage, usar el estado actual del DOM o el valor por defecto
+  const el = $(id);
+  return el ? el.checked : defaultValue;
+}
+
+// Función para verificar persistencia completa de checkboxes
+function verifyCheckboxPersistence() {
+  console.log('=== VERIFICACIÓN DE PERSISTENCIA DE CHECKBOXES ===');
+  const KEY = 'wf_persist_v23h7';
+  const checkboxes = [
+    "showHorizon", "showFeet", "showArc", "showLabels", "showPhiAngle", "phiFollow",
+    "showFlow", "showChord", "showLD", "showTableVel", "showAxesW", "showAxesB", "showAxesF",
+    "showWeight", "showComponentWeights", "showBuoy", "showResultants", "showTail", "showGeometry"
+  ];
+
+  try {
+    const stored = JSON.parse(localStorage.getItem(KEY) || '{}');
+    console.log('Valores almacenados en localStorage:', stored);
+
+    const p = P();
+    console.log('Valores en objeto P():', p.show);
+
+    let allMatch = true;
+    checkboxes.forEach(id => {
+      const el = S(id);
+      const domValue = el ? el.checked : 'NOT FOUND';
+      const storedValue = stored[id];
+      const pValue = p.show[id.replace('show', '').toLowerCase()] !== undefined ?
+        p.show[id.replace('show', '').toLowerCase()] : p.show[id];
+
+      console.log(`${id}: DOM=${domValue}, Stored=${storedValue}, P()=${pValue}`);
+
+      if (domValue !== storedValue || domValue !== pValue) {
+        allMatch = false;
+        console.warn(`❌ Inconsistencia en ${id}`);
+      }
+    });
+
+    if (allMatch) {
+      console.log('✅ Todos los checkboxes son persistentes y consistentes');
+    } else {
+      console.warn('⚠️ Hay inconsistencias en la persistencia de checkboxes');
+    }
+
+  } catch(e) {
+    console.error('Error verificando persistencia:', e);
+  }
+}
+
+// Función para limpiar localStorage (útil para testing)
+function clearCheckboxStorage() {
+  const KEY = 'wf_persist_v23h7';
+  try {
+    localStorage.removeItem(KEY);
+    console.log('localStorage limpiado para checkboxes');
+    // Recargar checkboxes con valores por defecto
+    location.reload();
+  } catch(e) {
+    console.error('Error limpiando localStorage:', e);
+  }
 }
 
 // Función de diagnóstico para verificar el estado de los checkboxes
@@ -492,7 +597,7 @@ function diagnoseCheckboxes() {
     'showHorizon',
     'showWeight'
   ];
-  
+
   checkboxes.forEach(id => {
     const el = $(id);
     if (el) {
@@ -501,7 +606,7 @@ function diagnoseCheckboxes() {
       console.log(`${id}: NOT FOUND`);
     }
   });
-  
+
   // Verificar valores en P()
   const p = P();
   console.log('Valores en P().show:', {
@@ -510,12 +615,14 @@ function diagnoseCheckboxes() {
     weight: p.show.weight,
     horizon: p.show.horizon
   });
-  
+
   // Coordenadas de dibujo se mostrarán después de calcular cx, cy
 }
 
-// Hacer la función disponible globalmente para debugging
+// Hacer las funciones disponibles globalmente para debugging
 window.diagnoseCheckboxes = diagnoseCheckboxes;
+window.verifyCheckboxPersistence = verifyCheckboxPersistence;
+window.clearCheckboxStorage = clearCheckboxStorage;
 const fmt=(x,d)=> {
   if (x === undefined || x === null || isNaN(x)) return '—';
   return (Math.abs(x)>=1000?x.toFixed(0):x.toFixed(d));
@@ -643,8 +750,8 @@ function bindUI(){
     { sliderId: 'Kphi', minId: 'KphiMin', maxId: 'KphiMax', defaultMin: 0, defaultMax: 0.15 },
     { sliderId: 'h0', minId: 'h0Min', maxId: 'h0Max', defaultMin: -0.8, defaultMax: 0.2 },
     { sliderId: 'cw', minId: 'cwMin', maxId: 'cwMax', defaultMin: 0, defaultMax: 400 },
-    { sliderId: 'vscale', minId: 'vscaleMin', maxId: 'vscaleMax', defaultMin: 200, defaultMax: 2000 },
-    { sliderId: 'hscale', minId: 'hscaleMin', maxId: 'hscaleMax', defaultMin: 60, defaultMax: 240 },
+    { sliderId: 'vscale', minId: 'vscaleMin', maxId: 'vscaleMax', defaultMin: 200, defaultMax: 4000 },
+    { sliderId: 'hscale', minId: 'hscaleMin', maxId: 'hscaleMax', defaultMin: 60, defaultMax: 480 },
     
     // Tabla & Mástil
     { sliderId: 'boardVolL', minId: 'boardVolLMin', maxId: 'boardVolLMax', defaultMin: 40, defaultMax: 140 },
@@ -661,8 +768,8 @@ function bindUI(){
     { sliderId: 'tailChord', minId: 'tailChordMin', maxId: 'tailChordMax', defaultMin: 0.10, defaultMax: 0.20 },
     
     // Sliders de escala
-    { sliderId: 'velscale', minId: 'velscaleMin', maxId: 'velscaleMax', defaultMin: 0.1, defaultMax: 6 },
-    { sliderId: 'fuerzascale', minId: 'fuerzascaleMin', maxId: 'fuerzascaleMax', defaultMin: 0.1, defaultMax: 6 }
+    { sliderId: 'velscale', minId: 'velscaleMin', maxId: 'velscaleMax', defaultMin: 0.1, defaultMax: 12 },
+    { sliderId: 'fuerzascale', minId: 'fuerzascaleMin', maxId: 'fuerzascaleMax', defaultMin: 0.1, defaultMax: 12 }
   ];
   
   allSliderLimits.forEach(({ sliderId, minId, maxId, defaultMin, defaultMax }) => {
@@ -743,7 +850,7 @@ function bindUI(){
     slider.max = maxInput.value;
   });
   
-  ["showHorizon","showFeet","showArc","showLabels","showPhiAngle","phiFollow","showFlow","showChord","showLD","showTableVel","showAxesW","showAxesB","showWeight","showComponentWeights","showBuoy","showResultants","showTail","showGeometry"]
+  ["showHorizon","showFeet","showArc","showLabels","showPhiAngle","phiFollow","showFlow","showChord","showLD","showTableVel","showAxesW","showAxesB","showAxesF","showWeight","showComponentWeights","showBuoy","showResultants","showTail","showGeometry"]
     .forEach(id=> {
       const el = S(id);
       if (el) {
@@ -784,10 +891,10 @@ function bindUI(){
   S('zoomIn').addEventListener('click', ()=>{
     const p = P();
     // Aumentar ambas escalas (zoom in)
-    const newHscale = Math.min(p.hscale * 1.2, 240); // Máximo 240
-    const newVscale = Math.min(p.vscale * 1.2, 2000); // Máximo 2000
-    const newVelscale = Math.min((p.velscale || 1) * 1.2, 6); // Máximo 6
-    const newFuerzascale = Math.min((p.fuerzascale || 1) * 1.2, 6); // Máximo 6
+    const newHscale = Math.min(p.hscale * 1.2, 480); // Máximo 480
+    const newVscale = Math.min(p.vscale * 1.2, 4000); // Máximo 4000
+    const newVelscale = Math.min((p.velscale || 1) * 1.2, 12); // Máximo 12
+    const newFuerzascale = Math.min((p.fuerzascale || 1) * 1.2, 12); // Máximo 12
     
     // Actualizar los sliders correspondientes
     const hscaleSlider = S('hscale');
@@ -858,6 +965,154 @@ function bindUI(){
   });
   S('state0').addEventListener('click', resetState);
   
+  // Event listener para medición de distancias en el SVG
+  // console.log('🔍 BUSCANDO SVG ELEMENT...');
+  const svgElement = S('geom');
+  // console.log('🔍 SVG ELEMENT ENCONTRADO:', !!svgElement);
+  
+  if(svgElement) {
+    // console.log('✅ CONFIGURANDO EVENT LISTENERS PARA SVG');
+    // console.log('SVG Element details:', {
+    //   tagName: svgElement.tagName,
+    //   id: svgElement.id,
+    //   className: svgElement.className,
+    //   clientWidth: svgElement.clientWidth,
+    //   clientHeight: svgElement.clientHeight
+    // });
+    
+    // Limpiar overlay anterior si existe
+    const existingOverlay = svgElement.querySelector('#measurement-overlay');
+    if (existingOverlay) {
+      existingOverlay.remove();
+      // console.log('🧹 OVERLAY ANTERIOR REMOVIDO');
+    }
+    
+    // FORZAR que el SVG sea clickeable
+    svgElement.style.pointerEvents = 'auto';
+    svgElement.style.zIndex = '9999';
+    
+    // Agregar un rectángulo transparente sobre todo el SVG para capturar eventos
+    const overlay = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    overlay.setAttribute('x', '0');
+    overlay.setAttribute('y', '0');
+    overlay.setAttribute('width', '100%');
+    overlay.setAttribute('height', '100%');
+    overlay.setAttribute('fill', 'transparent');
+    overlay.setAttribute('stroke', 'none');
+    overlay.setAttribute('pointer-events', 'all');
+    overlay.setAttribute('id', 'measurement-overlay');
+    svgElement.appendChild(overlay);
+    
+    // console.log('🎯 OVERLAY TRANSPARENTE AGREGADO PARA CAPTURAR EVENTOS');
+    
+    // Verificar si ya tiene event listeners
+    // console.log('Event listeners actuales en SVG:', svgElement._eventListeners || 'No disponible');
+    
+    svgElement.addEventListener('click', handleSvgClick);
+    svgElement.addEventListener('mouseenter', showMeasurementInstructions);
+    // Mantener el event listener de mousemove siempre activo
+    svgElement.addEventListener('mousemove', handleMouseMove);
+    // console.log('🎯 EVENT LISTENERS CONFIGURADOS (incluyendo mousemove permanente)');
+    
+    // Verificar que el event listener se agregó
+    // console.log('Verificación de event listeners después de agregar:', {
+    //   hasClickListener: svgElement.onclick !== null,
+    //   hasMouseMoveListener: true // Asumimos que se agregó correctamente
+    // });
+    
+    // Probar inmediatamente el event listener
+    // console.log('🧪 PROBANDO EVENT LISTENER...');
+    const testEvent = new MouseEvent('mousemove', {
+      clientX: 100,
+      clientY: 100,
+      bubbles: true
+    });
+    svgElement.dispatchEvent(testEvent);
+    
+  } else {
+    // console.log('❌ SVG ELEMENT NO ENCONTRADO - FUNCIONALIDAD DE MEDICIÓN DESHABILITADA');
+    // console.log('Intentando buscar SVG con diferentes métodos...');
+    
+    // Intentar buscar SVG de diferentes maneras
+    const svgById = document.getElementById('geom');
+    const svgByQuery = document.querySelector('#geom');
+    const allSvgs = document.querySelectorAll('svg');
+    
+    // console.log('SVG por getElementById:', !!svgById);
+    // console.log('SVG por querySelector:', !!svgByQuery);
+    // console.log('Total SVGs en documento:', allSvgs.length);
+    
+    if (allSvgs.length > 0) {
+      // console.log('Primer SVG encontrado:', {
+      //   id: allSvgs[0].id,
+      //   className: allSvgs[0].className
+      // });
+    }
+  }
+  
+  // Función de respaldo para configurar event listeners con delay
+  function setupMeasurementListenersWithDelay() {
+    console.log('⏰ INTENTANDO CONFIGURAR EVENT LISTENERS CON DELAY...');
+    const svgElement = S('geom') || document.getElementById('geom') || document.querySelector('#geom');
+    
+    if (svgElement) {
+      console.log('✅ SVG ENCONTRADO CON DELAY - CONFIGURANDO EVENT LISTENERS');
+      svgElement.addEventListener('click', handleSvgClick);
+      svgElement.addEventListener('mouseenter', showMeasurementInstructions);
+      svgElement.addEventListener('mousemove', handleMouseMove);
+      console.log('🎯 EVENT LISTENERS CONFIGURADOS CON ÉXITO (delay)');
+      
+      // Probar el event listener
+      const testEvent = new Event('mousemove');
+      svgElement.dispatchEvent(testEvent);
+    } else {
+      console.log('❌ SVG AÚN NO ENCONTRADO DESPUÉS DEL DELAY');
+    }
+  }
+  
+  // Configurar MutationObserver para detectar SVG dinámicamente
+  function setupMutationObserver() {
+    console.log('👀 CONFIGURANDO MUTATION OBSERVER PARA SVG...');
+    
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+          if (node.id === 'geom' || (node.tagName && node.tagName.toLowerCase() === 'svg' && node.id === 'geom')) {
+            console.log('🎯 SVG DETECTADO POR MUTATION OBSERVER!');
+            console.log('SVG Element:', {
+              tagName: node.tagName,
+              id: node.id,
+              className: node.className
+            });
+            
+            // Configurar event listeners
+            node.addEventListener('click', handleSvgClick);
+            node.addEventListener('mouseenter', showMeasurementInstructions);
+            node.addEventListener('mousemove', handleMouseMove);
+            console.log('✅ EVENT LISTENERS CONFIGURADOS VIA MUTATION OBSERVER');
+            
+            // Probar el event listener
+            const testEvent = new Event('mousemove');
+            node.dispatchEvent(testEvent);
+            
+            // Dejar de observar una vez encontrado
+            observer.disconnect();
+          }
+        });
+      });
+    });
+    
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+    
+    console.log('👀 MUTATION OBSERVER ACTIVO');
+  }
+  
+  // Iniciar MutationObserver
+  setupMutationObserver();
+  
   // Inicializar el estado del botón Play/Pause
   const playPauseButton = S('playPause');
   if(playPauseButton){
@@ -867,6 +1122,555 @@ function bindUI(){
   
   // Aplicar definiciones técnicas a todos los elementos
   applyTechnicalDefinitions();
+}
+
+// Función de prueba manual para debugging
+function testMeasurementSystem() {
+  // console.log('🧪 PRUEBA MANUAL DEL SISTEMA DE MEDICIÓN');
+  
+  const svg = S('geom') || document.getElementById('geom') || document.querySelector('#geom');
+  if (!svg) {
+    // console.log('❌ NO SE ENCONTRÓ SVG PARA PRUEBA');
+    return;
+  }
+  
+  // console.log('✅ SVG ENCONTRADO PARA PRUEBA');
+  
+  // Simular un click
+  // console.log('🖱️ SIMULANDO CLICK...');
+  const clickEvent = new MouseEvent('click', {
+    clientX: 100,
+    clientY: 100,
+    bubbles: true
+  });
+  svg.dispatchEvent(clickEvent);
+  
+  // Simular movimiento del mouse
+  // console.log('🖱️ SIMULANDO MOUSE MOVE...');
+  setTimeout(() => {
+    const moveEvent = new MouseEvent('mousemove', {
+      clientX: 150,
+      clientY: 150,
+      bubbles: true
+    });
+    svg.dispatchEvent(moveEvent);
+  }, 500);
+}
+
+// Hacer la función disponible globalmente para pruebas
+window.testMeasurementSystem = testMeasurementSystem;
+function handleSvgClick(event) {
+  const svg = S('geom');
+  if (!svg) return;
+  
+  // Obtener coordenadas del click relativo al SVG
+  const rect = svg.getBoundingClientRect();
+  const clickX = event.clientX - rect.left;
+  const clickY = event.clientY - rect.top;
+  
+  // Convertir a coordenadas físicas
+  const physicalPoint = screenToPhysical(clickX, clickY);
+  
+  // Agregar punto a la medición
+  measurementPoints.push(physicalPoint);
+  
+  // Crear marcador visual solo si no tenemos 2 puntos aún
+  // (los marcadores para 2 puntos se crean en drawMeasurementLine)
+  if (measurementPoints.length < 2) {
+    const marker = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    marker.setAttribute('cx', clickX);
+    marker.setAttribute('cy', clickY);
+    marker.setAttribute('r', '2');
+    marker.setAttribute('fill', '#ff0000');
+    marker.setAttribute('stroke', '#ffffff');
+    marker.setAttribute('stroke-width', '0.5');
+    marker.setAttribute('opacity', '0.5');
+    svg.appendChild(marker);
+    measurementMarkers.push(marker);
+  }
+  
+  console.log(`Punto ${measurementPoints.length} clickeado:`, {
+    screen: { x: clickX, y: clickY },
+    physical: { x: physicalPoint.x.toFixed(3), y: physicalPoint.y.toFixed(3) }
+  });
+  
+  // Dar feedback al usuario
+  if (measurementPoints.length === 1) {
+    // console.log('✅ PRIMER PUNTO: Mueve el mouse para ver distancias en tiempo real');
+    // console.log('💡 SEGUNDO CLICK: Medirá la distancia entre ambos puntos');
+  }
+  
+  // Si tenemos 2 puntos, dibujar la línea de medición
+  if (measurementPoints.length === 2) {
+    // Cancelar timeouts anteriores
+    if (measurementTimeout) {
+      clearTimeout(measurementTimeout);
+    }
+    if (markerTimeout) {
+      clearTimeout(markerTimeout);
+    }
+    
+    // Desactivar seguimiento del mouse (solo cambiar flag)
+    mouseTrackingActive = false;
+    // console.log('🖱️ SEGUIMIENTO DEL MOUSE DESACTIVADO');
+    
+    drawMeasurementLine();
+    
+    // console.log('🎯 MEDICIÓN COMPLETADA: Distancia entre los dos puntos');
+    // console.log('🧹 Sistema listo para nuevas mediciones');
+    
+    // Limpiar todo inmediatamente después de mostrar la medición
+    setTimeout(() => {
+      clearMeasurement();
+      // console.log('✅ Sistema limpiado - Listo para medir nuevamente');
+    }, 100); // Pequeño delay para que se vea la medición final
+  } else if (measurementPoints.length === 1) {
+    // Primer punto: mostrar distancia desde origen durante 2 segundos
+    if (measurementTimeout) {
+      clearTimeout(measurementTimeout);
+    }
+    
+    drawDistanceFromOrigin(physicalPoint);
+    
+    // console.log('🎯 MEDICIÓN DESDE ORIGEN COMPLETADA');
+    // console.log('💡 Mueve el mouse para ver distancias en tiempo real desde el origen');
+    
+    // Activar seguimiento del mouse
+    mouseTrackingActive = true;
+    // console.log('🔧 ACTIVANDO SEGUIMIENTO DEL MOUSE...');
+    // console.log('🖱️ SEGUIMIENTO DEL MOUSE ACTIVADO (event listener ya estaba activo)');
+    // console.log('💡 Mueve el mouse para ver distancias en tiempo real');
+    
+    // Timeout para borrar el texto de distancia desde W(0,0) en 4 segundos (duplicado)
+    measurementTimeout = setTimeout(() => {
+      // Solo borrar el texto y línea, mantener marcadores
+      if (measurementLine && measurementLine.parentNode) {
+        measurementLine.parentNode.removeChild(measurementLine);
+      }
+      if (measurementText && measurementText.parentNode) {
+        measurementText.parentNode.removeChild(measurementText);
+      }
+      if (measurementTextBg && measurementTextBg.parentNode) {
+        measurementTextBg.parentNode.removeChild(measurementTextBg);
+      }
+      // Limpiar variables del texto
+      measurementLine = null;
+      measurementText = null;
+      measurementTextBg = null;
+      measurementTimeout = null;
+    }, 4000);
+    
+    // Timeout para borrar los marcadores en 14 segundos (duplicado)
+    markerTimeout = setTimeout(() => {
+      clearMeasurement();
+    }, 14000);
+  }
+}
+
+function screenToPhysical(screenX, screenY) {
+  const svg = S('geom');
+  const wpx = svg.clientWidth || 600;
+  const hpx = svg.clientHeight || 420;
+  
+  // Obtener parámetros actuales
+  const params = P();
+  const scale = params.vscale;
+  
+  // Calcular coordenadas de pantalla con pan aplicado
+  const cx = wpx * 0.50 + pan.x;
+  const cy = (hpx * 0.62 + pan.y) - (playing ? h : params.h0) * scale;
+  
+  // Convertir coordenadas de pantalla a físicas
+  const physicalX = (screenX - cx) / scale;
+  const physicalY = (cy - screenY) / scale;
+  
+  return { x: physicalX, y: physicalY, screenX, screenY };
+}
+
+function physicalToScreen(physicalX, physicalY) {
+  const svg = S('geom');
+  const wpx = svg.clientWidth || 600;
+  const hpx = svg.clientHeight || 420;
+  
+  // Obtener parámetros actuales
+  const params = P();
+  const scale = params.vscale;
+  
+  // Calcular coordenadas de pantalla con pan aplicado
+  const cx = wpx * 0.50 + pan.x;
+  const cy = (hpx * 0.62 + pan.y) - (playing ? h : params.h0) * scale;
+  
+  // Convertir coordenadas físicas a pantalla
+  const screenX = physicalX * scale + cx;
+  const screenY = cy - physicalY * scale;
+  
+  return { screenX, screenY, x: physicalX, y: physicalY };
+}
+
+function drawMeasurementLine() {
+  if (measurementPoints.length !== 2) return;
+  
+  const svg = S('geom');
+  if (!svg) return;
+  
+  const p1 = measurementPoints[0];
+  const p2 = measurementPoints[1];
+  
+  // Calcular distancia física
+  const distance = Math.sqrt((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2);
+  
+  console.log('📏 DISTANCIA CALCULADA: ' + distance.toFixed(3) + ' unidades');
+  console.log('📍 Punto 1:', { x: p1.x.toFixed(3), y: p1.y.toFixed(3) });
+  console.log('📍 Punto 2:', { x: p2.x.toFixed(3), y: p2.y.toFixed(3) });
+  
+  // Limpiar medición anterior
+  clearMeasurement();
+  
+  // Limpiar específicamente textos del mouse que podrían quedar
+  if (mouseDistanceText && mouseDistanceText.parentNode) {
+    mouseDistanceText.parentNode.removeChild(mouseDistanceText);
+  }
+  if (mouseDistanceTextBg && mouseDistanceTextBg.parentNode) {
+    mouseDistanceTextBg.parentNode.removeChild(mouseDistanceTextBg);
+  }
+  mouseDistanceText = null;
+  mouseDistanceTextBg = null;
+  
+  // Recrear marcadores para los dos puntos
+  const marker1 = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  marker1.setAttribute('cx', p1.screenX);
+  marker1.setAttribute('cy', p1.screenY);
+  marker1.setAttribute('r', '2');
+  marker1.setAttribute('fill', '#ff0000');
+  marker1.setAttribute('stroke', '#ffffff');
+  marker1.setAttribute('stroke-width', '0.5');
+  marker1.setAttribute('opacity', '0.5');
+  svg.appendChild(marker1);
+  measurementMarkers.push(marker1);
+  
+  const marker2 = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  marker2.setAttribute('cx', p2.screenX);
+  marker2.setAttribute('cy', p2.screenY);
+  marker2.setAttribute('r', '2');
+  marker2.setAttribute('fill', '#ff0000');
+  marker2.setAttribute('stroke', '#ffffff');
+  marker2.setAttribute('stroke-width', '0.5');
+  marker2.setAttribute('opacity', '0.5');
+  svg.appendChild(marker2);
+  measurementMarkers.push(marker2);
+  
+  // Crear línea
+  measurementLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  measurementLine.setAttribute('x1', p1.screenX);
+  measurementLine.setAttribute('y1', p1.screenY);
+  measurementLine.setAttribute('x2', p2.screenX);
+  measurementLine.setAttribute('y2', p2.screenY);
+  measurementLine.setAttribute('stroke', '#ff0000');
+  measurementLine.setAttribute('stroke-width', '1');
+  measurementLine.setAttribute('stroke-dasharray', '4,2');
+  measurementLine.setAttribute('opacity', '0.4');
+  measurementLine.setAttribute('stroke-linecap', 'round');
+  svg.appendChild(measurementLine);
+  
+  // Crear texto con la distancia
+  const midX = (p1.screenX + p2.screenX) / 2;
+  const midY = (p1.screenY + p2.screenY) / 2;
+  
+  measurementText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  measurementText.setAttribute('x', midX);
+  measurementText.setAttribute('y', midY - 8);
+  measurementText.setAttribute('text-anchor', 'middle');
+  measurementText.setAttribute('font-size', '9');
+  measurementText.setAttribute('font-weight', 'normal');
+  measurementText.setAttribute('fill', '#ffffff');
+  measurementText.setAttribute('stroke', '#000000');
+  measurementText.setAttribute('stroke-width', '1');
+  measurementText.setAttribute('stroke-linecap', 'round');
+  measurementText.setAttribute('stroke-linejoin', 'round');
+  measurementText.setAttribute('opacity', '0.6');
+  measurementText.textContent = `${distance.toFixed(2)} m [${p1.x.toFixed(2)}, ${p1.y.toFixed(2)}] → [${p2.x.toFixed(2)}, ${p2.y.toFixed(2)}]`;
+  svg.appendChild(measurementText);
+  
+  // Crear texto de fondo para mejor legibilidad
+  const textBg = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  textBg.setAttribute('x', midX);
+  textBg.setAttribute('y', midY - 8);
+  textBg.setAttribute('text-anchor', 'middle');
+  textBg.setAttribute('font-size', '9');
+  textBg.setAttribute('font-weight', 'normal');
+  textBg.setAttribute('fill', '#000000');
+  textBg.setAttribute('opacity', '0.3');
+  textBg.textContent = `${distance.toFixed(2)} m [${p1.x.toFixed(2)}, ${p1.y.toFixed(2)}] → [${p2.x.toFixed(2)}, ${p2.y.toFixed(2)}]`;
+  svg.appendChild(textBg);
+  measurementTextBg = textBg;
+}
+
+function handleMouseMove(event) {
+  console.log('🖱️ MOUSE MOVE EVENT TRIGGERED');
+  console.log('Event details:', {
+    type: event.type,
+    target: event.target,
+    currentTarget: event.currentTarget,
+    clientX: event.clientX,
+    clientY: event.clientY
+  });
+  console.log('mouseTrackingActive:', mouseTrackingActive);
+  console.log('measurementPoints.length:', measurementPoints.length);
+  
+  if (!mouseTrackingActive || measurementPoints.length !== 1) {
+    console.log('❌ MOUSE MOVE IGNORED - Condiciones no cumplidas');
+    return;
+  }
+  
+  console.log('✅ MOUSE MOVE PROCESANDO...');
+  console.log('📏 Distancia calculada:', distance.toFixed(3), 'unidades');
+  
+  const svg = S('geom');
+  if (!svg) return;
+  
+  // Obtener coordenadas del mouse relativo al SVG
+  const rect = svg.getBoundingClientRect();
+  const mouseX = event.clientX - rect.left;
+  const mouseY = event.clientY - rect.top;
+  
+  // Convertir a coordenadas físicas
+  const mousePhysical = screenToPhysical(mouseX, mouseY);
+  const firstPoint = measurementPoints[0];
+  
+  // Calcular distancia desde el primer punto hasta el mouse
+  const distance = Math.sqrt((mousePhysical.x - firstPoint.x) ** 2 + (mousePhysical.y - firstPoint.y) ** 2);
+  
+  // Limpiar texto anterior del mouse
+  if (mouseDistanceText && mouseDistanceText.parentNode) {
+    mouseDistanceText.parentNode.removeChild(mouseDistanceText);
+  }
+  if (mouseDistanceTextBg && mouseDistanceTextBg.parentNode) {
+    mouseDistanceTextBg.parentNode.removeChild(mouseDistanceTextBg);
+  }
+  
+  // Crear texto con la distancia al mouse
+  mouseDistanceText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  mouseDistanceText.setAttribute('x', mouseX + 10);
+  mouseDistanceText.setAttribute('y', mouseY - 10);
+  mouseDistanceText.setAttribute('text-anchor', 'start');
+  mouseDistanceText.setAttribute('font-size', '9');
+  mouseDistanceText.setAttribute('font-weight', 'normal');
+  mouseDistanceText.setAttribute('fill', '#00ff00');
+  mouseDistanceText.setAttribute('stroke', '#000000');
+  mouseDistanceText.setAttribute('stroke-width', '1');
+  mouseDistanceText.setAttribute('stroke-linecap', 'round');
+  mouseDistanceText.setAttribute('stroke-linejoin', 'round');
+  mouseDistanceText.setAttribute('opacity', '0.8');
+  mouseDistanceText.textContent = `${distance.toFixed(2)} m (${mousePhysical.x.toFixed(2)}, ${mousePhysical.y.toFixed(2)})`;
+  svg.appendChild(mouseDistanceText);
+  
+  // Crear texto de fondo para mejor legibilidad
+  mouseDistanceTextBg = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  mouseDistanceTextBg.setAttribute('x', mouseX + 10);
+  mouseDistanceTextBg.setAttribute('y', mouseY - 10);
+  mouseDistanceTextBg.setAttribute('text-anchor', 'start');
+  mouseDistanceTextBg.setAttribute('font-size', '9');
+  mouseDistanceTextBg.setAttribute('font-weight', 'normal');
+  mouseDistanceTextBg.setAttribute('fill', '#000000');
+  mouseDistanceTextBg.setAttribute('opacity', '0.4');
+  mouseDistanceTextBg.textContent = `${distance.toFixed(2)} m (${mousePhysical.x.toFixed(2)}, ${mousePhysical.y.toFixed(2)})`;
+  svg.appendChild(mouseDistanceTextBg);
+}
+
+function drawDistanceFromOrigin(point) {
+  const svg = S('geom');
+  if (!svg) return;
+  
+  // Limpiar medición anterior
+  clearMeasurement();
+  
+  // Calcular las coordenadas físicas de W(0,0)
+  const wpx = svg.clientWidth || 600;
+  const hpx = svg.clientHeight || 420;
+  const horizonY = hpx * 0.45 + pan.y;
+  const wScreenX = 34 + pan.x;
+  const wScreenY = horizonY;
+  
+  // Convertir coordenadas de pantalla de W(0,0) a coordenadas físicas
+  const params = P();
+  const scale = params.vscale;
+  const cx = wpx * 0.50 + pan.x;
+  const cy = (hpx * 0.62 + pan.y) - (playing ? h : params.h0) * scale;
+  
+  const wPhysicalX = (wScreenX - cx) / scale;
+  const wPhysicalY = (cy - wScreenY) / scale;
+  
+  // Calcular distancia desde W(0,0) hasta el punto clickeado
+  const distance = Math.sqrt((point.x - wPhysicalX) ** 2 + (point.y - wPhysicalY) ** 2);
+  
+  console.log('📏 DISTANCIA DESDE ORIGEN W(0,0): ' + distance.toFixed(3) + ' unidades');
+  console.log('📍 Punto clickeado:', { x: point.x.toFixed(3), y: point.y.toFixed(3) });
+  console.log('📍 Origen W(0,0):', { x: wPhysicalX.toFixed(3), y: wPhysicalY.toFixed(3) });
+  
+  // Crear línea desde W(0,0) hasta el punto
+  measurementLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  measurementLine.setAttribute('x1', wScreenX);
+  measurementLine.setAttribute('y1', wScreenY);
+  measurementLine.setAttribute('x2', point.screenX);
+  measurementLine.setAttribute('y2', point.screenY);
+  measurementLine.setAttribute('stroke', '#ff0000');
+  measurementLine.setAttribute('stroke-width', '1');
+  measurementLine.setAttribute('stroke-dasharray', '4,2');
+  measurementLine.setAttribute('opacity', '0.4');
+  measurementLine.setAttribute('stroke-linecap', 'round');
+  svg.appendChild(measurementLine);
+  
+  // Crear texto con la distancia
+  const midX = (wScreenX + point.screenX) / 2;
+  const midY = (wScreenY + point.screenY) / 2;
+  
+  measurementText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  measurementText.setAttribute('x', midX);
+  measurementText.setAttribute('y', midY - 8);
+  measurementText.setAttribute('text-anchor', 'middle');
+  measurementText.setAttribute('font-size', '9');
+  measurementText.setAttribute('font-weight', 'normal');
+  measurementText.setAttribute('fill', '#ffffff');
+  measurementText.setAttribute('stroke', '#000000');
+  measurementText.setAttribute('stroke-width', '1');
+  measurementText.setAttribute('stroke-linecap', 'round');
+  measurementText.setAttribute('stroke-linejoin', 'round');
+  measurementText.setAttribute('opacity', '0.6');
+  measurementText.textContent = `${distance.toFixed(2)} m desde W(0,0) (${point.x.toFixed(2)}, ${point.y.toFixed(2)})`;
+  svg.appendChild(measurementText);
+  
+  // Crear texto de fondo para mejor legibilidad
+  const textBg = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  textBg.setAttribute('x', midX);
+  textBg.setAttribute('y', midY - 8);
+  textBg.setAttribute('text-anchor', 'middle');
+  textBg.setAttribute('font-size', '9');
+  textBg.setAttribute('font-weight', 'normal');
+  textBg.setAttribute('fill', '#000000');
+  textBg.setAttribute('opacity', '0.3');
+  textBg.textContent = `${distance.toFixed(2)} m desde W(0,0) (${point.x.toFixed(2)}, ${point.y.toFixed(2)})`;
+  svg.appendChild(textBg);
+  measurementTextBg = textBg;
+}
+
+function showMeasurementInstructions() {
+  if (measurementInstructionsShown) return;
+  
+  const svg = S('geom');
+  if (!svg) return;
+  
+  measurementInstructionsShown = true;
+  
+  // Crear tooltip con instrucciones
+  const instructionsText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  instructionsText.setAttribute('x', '50%');
+  instructionsText.setAttribute('y', '50');
+  instructionsText.setAttribute('text-anchor', 'middle');
+  instructionsText.setAttribute('font-size', '10');
+  instructionsText.setAttribute('font-weight', 'normal');
+  instructionsText.setAttribute('fill', '#ffffff');
+  instructionsText.setAttribute('stroke', '#000000');
+  instructionsText.setAttribute('stroke-width', '1.5');
+  instructionsText.setAttribute('stroke-linecap', 'round');
+  instructionsText.setAttribute('stroke-linejoin', 'round');
+  instructionsText.setAttribute('opacity', '0.7');
+  
+  // Crear texto de fondo
+  const instructionsBg = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  instructionsBg.setAttribute('x', '50%');
+  instructionsBg.setAttribute('y', '50');
+  instructionsBg.setAttribute('text-anchor', 'middle');
+  instructionsBg.setAttribute('font-size', '10');
+  instructionsBg.setAttribute('font-weight', 'normal');
+  instructionsBg.setAttribute('fill', '#000000');
+  instructionsBg.setAttribute('opacity', '0.4');
+  
+  const lines = [
+    '📏 MEDICIÓN DE DISTANCIAS',
+    'PASO 1: Click en cualquier punto del dibujo',
+    'PASO 2: Mueve el mouse para ver distancias en tiempo real',
+    'PASO 3: Click en un segundo punto para medir entre ambos',
+    '💡 La medición se limpia automáticamente'
+  ];
+  
+  // Agregar líneas de texto
+  lines.forEach((line, index) => {
+    const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+    tspan.setAttribute('x', '50%');
+    tspan.setAttribute('dy', index === 0 ? '0' : '14');
+    tspan.textContent = line;
+    instructionsBg.appendChild(tspan);
+    
+    const tspanFg = tspan.cloneNode(true);
+    instructionsText.appendChild(tspanFg);
+  });
+  
+  svg.appendChild(instructionsBg);
+  svg.appendChild(instructionsText);
+  
+  // Ocultar instrucciones después de 4 segundos
+  setTimeout(() => {
+    if (instructionsBg.parentNode) {
+      instructionsBg.parentNode.removeChild(instructionsBg);
+    }
+    if (instructionsText.parentNode) {
+      instructionsText.parentNode.removeChild(instructionsText);
+    }
+  }, 4000);
+}
+
+function clearMeasurement() {
+  const svg = S('geom');
+  if (!svg) return;
+  
+  // Remover línea
+  if (measurementLine && measurementLine.parentNode) {
+    measurementLine.parentNode.removeChild(measurementLine);
+  }
+  
+  // Remover textos
+  if (measurementText && measurementText.parentNode) {
+    measurementText.parentNode.removeChild(measurementText);
+  }
+  if (measurementTextBg && measurementTextBg.parentNode) {
+    measurementTextBg.parentNode.removeChild(measurementTextBg);
+  }
+  
+  // Remover marcadores
+  measurementMarkers.forEach(marker => {
+    if (marker && marker.parentNode) {
+      marker.parentNode.removeChild(marker);
+    }
+  });
+  
+  // Remover textos del mouse
+  if (mouseDistanceText && mouseDistanceText.parentNode) {
+    mouseDistanceText.parentNode.removeChild(mouseDistanceText);
+  }
+  if (mouseDistanceTextBg && mouseDistanceTextBg.parentNode) {
+    mouseDistanceTextBg.parentNode.removeChild(mouseDistanceTextBg);
+  }
+  
+  // Desactivar seguimiento del mouse
+  mouseTrackingActive = false;
+  svg.removeEventListener('mousemove', handleMouseMove);
+  
+  // Limpiar variables principales
+  measurementPoints = [];
+  measurementLine = null;
+  measurementText = null;
+  measurementTextBg = null;
+  measurementMarkers = [];
+  
+  // Limpiar timeout si existe
+  if (measurementTimeout) {
+    clearTimeout(measurementTimeout);
+    measurementTimeout = null;
+  }
+  if (markerTimeout) {
+    clearTimeout(markerTimeout);
+    markerTimeout = null;
+  }
 }
 
 function P(){
@@ -884,7 +1688,7 @@ function P(){
     tailOffsetX: getValue("tailOffsetX", 0.6), tailOffsetZ: getValue("tailOffsetZ", 0.02),
     foilChord: getValue("foilChord", 0.25), tailChord: getValue("tailChord", 0.15),
     tailArea: getValue("tailArea", 0.025), tailLength: getValue("tailLength", 0.6), tailIncidence: getValue("tailIncidence", 0),
-    show:{ horizon: getChecked("showHorizon", true), feet: getChecked("showFeet", true), arc: getChecked("showArc", true), labels: getChecked("showLabels", true), flow: getChecked("showFlow", true), chord: getChecked("showChord", true), LD: getChecked("showLD", true), tail: getChecked("showTail", true), foil: getChecked("showFoil", true), tableVel: getChecked("showTableVel", true), phiFollow: getChecked("phiFollow", true), axesW: getChecked("showAxesW", false), axesB: getChecked("showAxesB", false), weight: getChecked("showWeight", false), componentWeights: getChecked("showComponentWeights", false), buoy: getChecked("showBuoy", false), result: getChecked("showResultants", false), phiAngle: getChecked("showPhiAngle", true), geometry: getChecked("showGeometry", false) }
+    show:{ horizon: getChecked("showHorizon", true), feet: getChecked("showFeet", true), arc: getChecked("showArc", true), labels: getChecked("showLabels", true), flow: getChecked("showFlow", true), chord: getChecked("showChord", true), LD: getChecked("showLD", true), tail: getChecked("showTail", true), foil: getChecked("showFoil", true), tableVel: getChecked("showTableVel", true), phiFollow: getChecked("phiFollow", true), axesW: getChecked("showAxesW", false), axesB: getChecked("showAxesB", false), axesF: getChecked("showAxesF", false), weight: getChecked("showWeight", false), componentWeights: getChecked("showComponentWeights", false), buoy: getChecked("showBuoy", false), result: getChecked("showResultants", false), phiAngle: getChecked("showPhiAngle", true), geometry: getChecked("showGeometry", false) }
   };
 
   return params;
@@ -1187,7 +1991,7 @@ function drawSystemGeometry(svg, p, scale, cx, cy) {
     // Crear líneas de texto usando tspan para mejor control
     const cmLines = [
       'Centro de Masa del Sistema',
-      `Global: (${cmGlobal.x.toFixed(1)}, ${cmGlobal.y.toFixed(1)})`,
+      `W(${cmGlobal.x.toFixed(1)}, ${cmGlobal.y.toFixed(1)})`,
       'Sistema W: Y=0 en nivel del agua',
       'Y > 0: arriba del agua',
       'Y < 0: abajo del agua'
@@ -1478,6 +2282,8 @@ function resetState(){
   t=0; 
   X = { x:0, z:-0.20, u:3.5, w:0.0, theta: 3*Math.PI/180, q:0.0 }; // Reiniciar estado ODE
   cyc_acc={na:0,a:0,th:0,L:0,Th:0,Fr:0}; 
+  // Limpiar mediciones al reiniciar estado
+  clearMeasurement();
   draw(); 
 }
 
@@ -1627,14 +2433,17 @@ function draw(instOpt){
   S("VTableOut").textContent=fmt(Math.sqrt(inst.V*inst.V + wv*wv), 2); // Velocidad total de la tabla
 
   const svg=S("geom"); svg.innerHTML="";
+  // Limpiar mediciones anteriores al redibujar
+  clearMeasurement();
+  
   const wpx=svg.clientWidth||600, hpx=svg.clientHeight||420;
   const scale = p.vscale;
   const cx=wpx*0.50 + pan.x;
   const horizonY=hpx*0.45 + pan.y;
-  const cy=(hpx*0.62 + pan.y) - h*scale;
+  const cy=(hpx*0.62 + pan.y) - (playing ? h : p.h0)*scale;
 
-  // Verificar coordenadas de dibujo
-  console.log('Coordenadas de dibujo:', { cx, cy, scale, wpx, hpx, pan, h });
+  // Verificar coordenadas de dibujo (pantalla en píxeles)
+  console.log('Coordenadas de pantalla (px):', { cx, cy, scale, wpx, hpx, pan, h });
 
   // DEBUG: Mostrar parámetros de visualización
   // console.log('DEBUG Viewport:', {
@@ -1843,9 +2652,10 @@ function draw(instOpt){
     tooltipBg.setAttribute('pointer-events', 'none');
 
     // Crear líneas de texto usando tspan para mejor control
+    // Las coordenadas x,y ya son físicas (resultado de localToGlobal)
     const lines = [
       componentName,
-      `Global: (${x.toFixed(1)}, ${y.toFixed(1)})`,
+      `W(${x.toFixed(2)}, ${y.toFixed(2)})`,
       'Sistema W: Y=0 en nivel del agua',
       ...(localCoords ? ['Y > 0: arriba del agua', 'Y < 0: abajo del agua'] : [])
     ];
@@ -2039,7 +2849,7 @@ function draw(instOpt){
     const foilTitle = document.createElementNS('http://www.w3.org/2000/svg', 'title');
     foilTitle.textContent = `Foil Principal
 Tamaño: ${p.foilChord?.toFixed(3) || 0.25} m × ${(p.S / p.foilChord)?.toFixed(3) || 0.6} m
-Posición: X=${foilX_physical?.toFixed(3)} m, Y=0 m, Z=${foilZ_physical?.toFixed(3)} m
+F(${foilX_physical?.toFixed(3)}, ${foilZ_physical?.toFixed(3)})
 Sistema de coordenadas: F (foil local) - centrado en el foil
 Área: ${(p.S || 0.15)?.toFixed(3)} m²`;
     foilRect.appendChild(foilTitle);
@@ -2085,8 +2895,8 @@ Sistema de coordenadas: F (foil local) - centrado en el foil
   const boardTitle = document.createElementNS('http://www.w3.org/2000/svg', 'title');
   boardTitle.textContent = `Tabla
 Tamaño: ${(p.boardLen || 1.4)?.toFixed(3)} m × ${(p.boardArea / p.boardLen)?.toFixed(3) || 0.4} m
-Posición: X=${((xAnchor - wpx*0.50) / p.vscale)?.toFixed(3)} m, Y=0 m, Z=${((hpx*0.62 - yAnchor) / p.vscale)?.toFixed(3)} m
-Sistema de coordenadas: F (foil local) - centrado en el foil
+B(${((xAnchor - wpx*0.50) / p.vscale)?.toFixed(3)}, ${((hpx*0.62 - yAnchor) / p.vscale)?.toFixed(3)})
+Sistema de coordenadas: B (tabla local) - centrado en la tabla
 Área: ${(p.boardArea || 0.4)?.toFixed(3)} m²
 Volumen: ${(p.boardVolL / 1000)?.toFixed(3) || 0.04} m³`;
   poly.appendChild(boardTitle);
@@ -2232,7 +3042,8 @@ Volumen: ${(p.boardVolL / 1000)?.toFixed(3) || 0.04} m³`;
     const sternX = xAnchor - (Lb/2)*tHat[0];
     const sternY = yAnchor - (Lb/2)*tHat[1];
     // Calcular coordenadas físicas globales del origen B (popa de la tabla)
-    const sternGlobal = localToGlobal(0, 0, phi, p.mastH, p.hscale, p.vscale, cx, cy);
+    // La popa está en localX = -boardLen/2 (mitad de la tabla hacia atrás)
+    const sternGlobal = localToGlobal(-p.boardLen/2, 0, phi, p.mastH, p.hscale, p.vscale, cx, cy);
     arrow2(sternX,sternY, sternX+32*tHat[0], sternY+32*tHat[1], '#000',1.6, `Eje X local de la tabla (tangencial)\nSistema de coordenadas solidario a la tabla\nOrigen B: (${sternGlobal.x.toFixed(1)}, ${sternGlobal.y.toFixed(1)})`); text(sternX+32*tHat[0]+4, sternY+32*tHat[1]+4, 'x_b');
     arrow2(sternX,sternY, sternX+32*nHat[0], sternY+32*nHat[1], '#000',1.6, `Eje Y local de la tabla (normal)\nSistema de coordenadas solidario a la tabla\nOrigen B: (${sternGlobal.x.toFixed(1)}, ${sternGlobal.y.toFixed(1)})`); text(sternX+32*nHat[0]+4, sternY+32*nHat[1]+4, 'y_b');
     const cB=document.createElementNS('http://www.w3.org/2000/svg','circle'); cB.setAttribute('cx',sternX); cB.setAttribute('cy',sternY); cB.setAttribute('r','3'); cB.setAttribute('fill','#000'); svg.appendChild(cB);
@@ -2240,20 +3051,21 @@ Volumen: ${(p.boardVolL / 1000)?.toFixed(3) || 0.04} m³`;
   }
 
   // Ejes F (foil local) - Sistema de coordenadas local del foil
-  if(p.show.axesW || p.show.axesB){  // Solo mostrar si se muestran otros ejes
-    const foilOriginX = xAnchor;  // Centro horizontal del foil
-    const foilOriginY = hpx * 0.62;  // Línea de referencia Z (cerca de la línea de flotación)
-    
+  if(p.show.axesF){  // Control independiente para mostrar ejes del foil
     // Calcular coordenadas físicas globales del origen F (centro del foil)
     const foilGlobal = localToGlobal(p.foilOffsetX || 0.3, p.foilOffsetZ || 0.05, phi, p.mastH, p.hscale, p.vscale, cx, cy);
+    
+    // Convertir coordenadas físicas del foil a coordenadas de pantalla
+    const foilOriginX = foilGlobal.x;
+    const foilOriginY = foilGlobal.y;
 
     // Eje X local del foil (horizontal, distancia desde el centro del foil)
-    arrow2(foilOriginX, foilOriginY, foilOriginX + 32, foilOriginY, '#228B22', 1.6,
+    arrow2(foilOriginX, foilOriginY, foilOriginX + 32, foilOriginY, '#0d47a1', 1.6,
            `Eje X local del foil (horizontal)\nSistema de coordenadas centrado en el foil\nX = distancia horizontal desde el centro del foil\nOrigen F: (${foilGlobal.x.toFixed(1)}, ${foilGlobal.y.toFixed(1)})`);
     text(foilOriginX + 36, foilOriginY + 4, 'x_f');
 
     // Eje Z local del foil (vertical, profundidad/altura)
-    arrow2(foilOriginX, foilOriginY, foilOriginX, foilOriginY - 32, '#228B22', 1.6,
+    arrow2(foilOriginX, foilOriginY, foilOriginX, foilOriginY - 32, '#0d47a1', 1.6,
            `Eje Z local del foil (vertical)\nSistema de coordenadas centrado en el foil\nZ = profundidad/altura relativa al foil\nOrigen F: (${foilGlobal.x.toFixed(1)}, ${foilGlobal.y.toFixed(1)})`);
     text(foilOriginX - 8, foilOriginY - 36, 'z_f');
 
@@ -2262,7 +3074,7 @@ Volumen: ${(p.boardVolL / 1000)?.toFixed(3) || 0.04} m³`;
     cF.setAttribute('cx', foilOriginX);
     cF.setAttribute('cy', foilOriginY);
     cF.setAttribute('r', '3');
-    cF.setAttribute('fill', '#228B22');
+    cF.setAttribute('fill', '#0d47a1');
     svg.appendChild(cF);
     text(foilOriginX - 20, foilOriginY - 8, 'F(0,0)');
   }
@@ -2354,8 +3166,8 @@ Volumen: ${(p.boardVolL / 1000)?.toFixed(3) || 0.04} m³`;
     const tailTitle = document.createElementNS('http://www.w3.org/2000/svg', 'title');
     tailTitle.textContent = `Cola del Foil
 Tamaño: ${p.tailChord?.toFixed(3) || 0.15} m × ${(p.tailArea / p.tailChord)?.toFixed(3) || 0.17} m
-Centro de rotación: X=${((tailCx - wpx*0.50) / p.vscale)?.toFixed(3)} m, Y=0 m, Z=${((hpx*0.62 - tailCy) / p.vscale)?.toFixed(3)} m
-Sistema de coordenadas: F (foil local) - centrado en el foil`;
+T(${((tailCx - wpx*0.50) / p.vscale)?.toFixed(3)}, ${((hpx*0.62 - tailCy) / p.vscale)?.toFixed(3)})
+Sistema de coordenadas: T (cola local) - centrado en la cola`;
     tailRect.appendChild(tailTitle);
     
     svg.appendChild(tailRect);
@@ -2454,20 +3266,24 @@ Sistema de coordenadas: F (foil local) - centrado en el foil`;
     // Centro de la tabla
     const boardWeight = (p.boardMass || 5.5) * g;
     const boardArrowLength = Math.max(12, Math.abs(k * boardWeight));
+    // Calcular coordenadas físicas globales del centro de la tabla (localX=0, localZ=0)
+    const boardGlobal = localToGlobal(0, 0, phi_local, p.mastH, p.hscale, p.vscale, cx, cy);
     const boardScreen = { screenX: cx, screenY: cy };
-    if (!isNaN(boardScreen.screenX) && !isNaN(boardScreen.screenY)) {
-      arrow2(boardScreen.screenX, boardScreen.screenY,
-             boardScreen.screenX, boardScreen.screenY + boardArrowLength,
+    if (!isNaN(boardGlobal.x) && !isNaN(boardGlobal.y)) {
+      arrow2(boardGlobal.x, boardGlobal.y,
+             boardGlobal.x, boardGlobal.y + boardArrowLength,
              '#8B4513', 2.0,
              `Peso tabla: ${boardWeight.toFixed(1)} N\nMasa: ${(p.boardMass || 5.5).toFixed(1)} kg`);
       // Dibujar indicador de centro de masa de la tabla (estilo similar al CM general)
-      drawCenterIndicator(cx, cy, '#8B4513', scale, 'Centro Tabla', {x: 0, z: 0});
+      drawCenterIndicator(boardGlobal.x, boardGlobal.y, '#8B4513', scale, 'Centro Tabla', {x: 0, z: 0});
     }
 
     // Centro del foil
     const foilWeight = (p.foilMass || 2.0) * g;
     const foilArrowLength = Math.max(12, Math.abs(k * foilWeight));
     const foilLocal = {x: p.foilOffsetX || 0.3, z: p.foilOffsetZ || 0.05};
+    // Calcular coordenadas físicas globales del centro del foil
+    const foilGlobal = localToGlobal(foilLocal.x, foilLocal.z, phi_local, p.mastH, p.hscale, p.vscale, cx, cy);
     if (!isNaN(foilGlobal.x) && !isNaN(foilGlobal.y)) {
       arrow2(foilGlobal.x, foilGlobal.y,
              foilGlobal.x, foilGlobal.y + foilArrowLength,
@@ -2484,14 +3300,14 @@ Sistema de coordenadas: F (foil local) - centrado en el foil`;
       x: (p.foilOffsetX || 0.3) + (p.tailOffsetX || 0.6),
       z: (p.foilOffsetZ || 0.05) + (p.tailOffsetZ || 0.02)
     };
-    const tailScreen = localToGlobal(tailLocal.x, tailLocal.z, phi_local, p.mastH || 0.8, p.hscale || 80, p.vscale || 300, cx, cy);
-    if (!isNaN(tailScreen.x) && !isNaN(tailScreen.y)) {
-      arrow2(tailScreen.x, tailScreen.y,
-             tailScreen.x, tailScreen.y + tailArrowLength,
-             '#228B22', 2.0,
+    const tailGlobal = localToGlobal(tailLocal.x, tailLocal.z, phi_local, p.mastH, p.hscale, p.vscale, cx, cy);
+    if (!isNaN(tailGlobal.x) && !isNaN(tailGlobal.y)) {
+      arrow2(tailGlobal.x, tailGlobal.y,
+             tailGlobal.x, tailGlobal.y + tailArrowLength,
+             '#0d47a1', 2.0,
              `Peso cola: ${tailWeight.toFixed(1)} N\nMasa: ${(p.tailMass || 0.5).toFixed(1)} kg`);
       // Dibujar indicador de centro de rotación de la cola
-      drawCenterIndicator(tailScreen.x, tailScreen.y, '#228B22', scale, 'Centro Rotación Cola', tailLocal);
+      drawCenterIndicator(tailGlobal.x, tailGlobal.y, '#0d47a1', scale, 'Centro Rotación Cola', tailLocal);
     }
   }
 
@@ -2660,11 +3476,18 @@ function testCharts() {
   refreshCharts();
 }
 
+// Mensaje de bienvenida para funcionalidad de medición
+// console.log('🚀 SIMULADOR PUMP FOIL CARGADO');
+// console.log('📏 FUNCIONALIDAD DE MEDICIÓN ACTIVADA');
+// console.log('💡 Pasa el mouse sobre el dibujo para ver instrucciones');
+// console.log('🔍 Abre la consola del navegador (F12) para ver feedback en tiempo real');
+// console.log('🧪 Si no funciona automáticamente, ejecuta: testMeasurementSystem() en la consola');
+
 window.addEventListener('DOMContentLoaded', ()=>{
   bindUI();
-  resetState();
-  // Forzar actualización completa después de inicialización
+  // Esperar a que se complete la carga de localStorage antes de inicializar
   setTimeout(() => {
+    resetState();
     updateAll();
-  }, 100);
+  }, 50);
 });

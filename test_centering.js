@@ -24,17 +24,17 @@ const phiRad = testParams.phi * Math.PI / 180;
 const xAnchor = testParams.foilDist * Math.cos(phiRad);
 const yAnchor = testParams.mastH - testParams.foilDist * Math.sin(phiRad);
 
-console.log(`Posición del ancla: (${xAnchor.toFixed(2)}, ${yAnchor.toFixed(2)})`);
+console.log(`Posición del ancla (pantalla): (${xAnchor.toFixed(2)}, ${yAnchor.toFixed(2)}) px`);
 
 // Calcular pan necesario para centrar
 const panX = centerX - xAnchor;
 const panY = centerY - yAnchor;
 
-console.log(`Pan necesario: x=${panX.toFixed(2)}, y=${panY.toFixed(2)}`);
-console.log(`Posición final centrada: (${centerX.toFixed(2)}, ${centerY.toFixed(2)})`);
+console.log(`Pan necesario (pantalla): x=${panX.toFixed(2)}, y=${panY.toFixed(2)} px`);
+console.log(`Posición final centrada (pantalla): (${centerX.toFixed(2)}, ${centerY.toFixed(2)}) px`);
 
 // Verificar que la tabla quede dentro de los límites de la pantalla
 const finalX = xAnchor + panX;
 const finalY = yAnchor + panY;
-console.log(`Verificación - Posición final: (${finalX.toFixed(2)}, ${finalY.toFixed(2)})`);
+console.log(`Verificación - Posición final (pantalla): (${finalX.toFixed(2)}, ${finalY.toFixed(2)}) px`);
 console.log(`¿Centrada correctamente? ${Math.abs(finalX - centerX) < 0.1 && Math.abs(finalY - centerY) < 0.1 ? 'SÍ' : 'NO'}`);

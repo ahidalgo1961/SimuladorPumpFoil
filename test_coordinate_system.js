@@ -36,7 +36,7 @@ function testCoordinateSystem() {
 
   // Calcular distancia entre foil y tail en coordenadas globales
   const distance = Math.sqrt((foilGlobal.x - tailGlobal.x)**2 + (foilGlobal.y - tailGlobal.y)**2);
-  console.log(`Distancia Foil-Tail: ${distance.toFixed(1)} px`);
+  console.log(`Distancia Foil-Tail: ${distance.toFixed(1)} m`);
 
   // Verificar que las posiciones sean consistentes
   const expectedFoilDistance = testParams.mastH * testParams.hscale;
