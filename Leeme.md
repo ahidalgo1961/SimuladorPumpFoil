@@ -12,6 +12,8 @@ Aplicación web interactiva que simula la física y dinámica del wing foil, un 
 
 ### **Interfaz de Usuario Mejorada**
 - **Botón Centrar Tabla Automático**: "📍 Centrar Tabla" para posicionamiento automático
+- **Controles de Zoom Global**: Botones "+" y "−" para escalado integral de todos los elementos visuales
+- **Vectores de Peso de Componentes**: Vectores individuales de peso para tabla, foil y cola en sus centros geométricos
 - **Escalado Dinámico**: Escalas optimizadas vertical (300 px/m) y horizontal (80 px/m)
 - **Depuración Mejorada**: Logging en consola para diagnóstico de posiciones
 
@@ -66,7 +68,13 @@ http://localhost:3001
 ### **Visualización Interactiva**
 - **Gráficos SVG**: Gráficos vectoriales escalables para visualización nítida
 - **Actualizaciones en Tiempo Real**: Todos los parámetros se actualizan simultáneamente durante la simulación
+- **Visualización de Pesos de Componentes**: Vectores individuales de peso en centros geométricos (marrón=tabla, azul=foil, verde=cola)
 - **Controles de Pan y Zoom**: Navegar y escalar el área de visualización
+  - **Botones Zoom In/Out**: "+" y "−" para escalado integral
+  - **Escalado Global**: El zoom afecta todos los elementos visuales proporcionalmente (geometría, vectores, fuerzas)
+  - **Factores de Escala**: Escala horizontal (80 px/m), Escala vertical (300 px/m)
+  - **Escalado de Vectores**: Vectores de velocidad y fuerza se escalan con el zoom (velscale, fuerzascale)
+  - **Rango de Zoom**: Escalado flexible con adaptación automática al contenido
 - **Múltiples Modos de Vista**: Mostrar/ocultar diferentes vectores de fuerza y sistemas de referencia
 
 ### **KPIs Completos**

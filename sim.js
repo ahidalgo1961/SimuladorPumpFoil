@@ -57,10 +57,28 @@ const PHYSICAL_DEFINITIONS = {
     range: "950 - 1030 kg/m³"
   },
   mass: {
-    name: "Masa total",
+    name: "Masa del rider",
     unit: "kg",
-    description: "Masa total del sistema (rider + equipo). Afecta la dinámica y fuerzas gravitatorias.",
-    range: "55 - 110 kg"
+    description: "Masa del rider (sin equipo). La masa total del sistema se calcula automáticamente como rider + tabla + foil + cola.",
+    range: "50 - 100 kg"
+  },
+  boardMass: {
+    name: "Masa Tabla (T)",
+    unit: "kg",
+    description: "Masa de la tabla de windfoil. Afecta el centro de masas y estabilidad.",
+    range: "3 - 8 kg"
+  },
+  foilMass: {
+    name: "Masa Foil (F)",
+    unit: "kg",
+    description: "Masa del foil principal. Afecta el centro de masas y respuesta dinámica.",
+    range: "1 - 3 kg"
+  },
+  tailMass: {
+    name: "Masa Cola (C)",
+    unit: "kg",
+    description: "Masa de la cola del foil. Afecta el centro de masas y estabilidad direccional.",
+    range: "0.2 - 0.8 kg"
   },
   LD: {
     name: "Relación L/D",
@@ -423,7 +441,7 @@ const PHYSICAL_DEFINITIONS = {
   }
 };
 
-const sliders = ["v0","phi","theta0","gamma0","S","tailArea","tailLength","tailIncidence","rho","mass","LD","clslope","clmax","stall",
+const sliders = ["v0","phi","theta0","gamma0","S","tailArea","tailLength","tailIncidence","rho","mass","boardMass","foilMass","tailMass","LD","clslope","clmax","stall",
  "freq","ampV","ampT","ampG","phaseT","phaseG","dtStep",
  "lambda","dstance","Af","Ab","phaseF","phaseB","Gtheta","Kphi","h0","cw","vscale","velscale","fuerzascale","hscale",
  "boardVolL","boardArea","mastH","boardLen",
@@ -464,6 +482,39 @@ function getChecked(id, defaultValue = false) {
   const el = $(id); 
   return el ? el.checked : defaultValue; 
 }
+
+// Función de diagnóstico para verificar el estado de los checkboxes
+function diagnoseCheckboxes() {
+  console.log('=== DIAGNÓSTICO DE CHECKBOXES ===');
+  const checkboxes = [
+    'showComponentWeights',
+    'showGeometry',
+    'showHorizon',
+    'showWeight'
+  ];
+  
+  checkboxes.forEach(id => {
+    const el = $(id);
+    if (el) {
+      console.log(`${id}: checked=${el.checked}, exists=${!!el}`);
+    } else {
+      console.log(`${id}: NOT FOUND`);
+    }
+  });
+  
+  // Verificar valores en P()
+  const p = P();
+  console.log('=== VALORES EN P().show ===');
+  console.log('componentWeights:', p.show.componentWeights);
+  console.log('geometry:', p.show.geometry);
+  console.log('weight:', p.show.weight);
+  console.log('horizon:', p.show.horizon);
+  
+  // Coordenadas de dibujo se mostrarán después de calcular cx, cy
+}
+
+// Hacer la función disponible globalmente para debugging
+window.diagnoseCheckboxes = diagnoseCheckboxes;
 const fmt=(x,d)=> {
   if (x === undefined || x === null || isNaN(x)) return '—';
   return (Math.abs(x)>=1000?x.toFixed(0):x.toFixed(d));
@@ -562,7 +613,10 @@ function bindUI(){
     { sliderId: 'tailLength', minId: 'tailLengthMin', maxId: 'tailLengthMax', defaultMin: 0.3, defaultMax: 1.0 },
     { sliderId: 'tailIncidence', minId: 'tailIncidenceMin', maxId: 'tailIncidenceMax', defaultMin: -5, defaultMax: 5 },
     { sliderId: 'rho', minId: 'rhoMin', maxId: 'rhoMax', defaultMin: 950, defaultMax: 1030 },
-    { sliderId: 'mass', minId: 'massMin', maxId: 'massMax', defaultMin: 55, defaultMax: 110 },
+    { sliderId: 'mass', minId: 'massMin', maxId: 'massMax', defaultMin: 50, defaultMax: 100 },
+    { sliderId: 'boardMass', minId: 'boardMassMin', maxId: 'boardMassMax', defaultMin: 3, defaultMax: 8 },
+    { sliderId: 'foilMass', minId: 'foilMassMin', maxId: 'foilMassMax', defaultMin: 1, defaultMax: 3 },
+    { sliderId: 'tailMass', minId: 'tailMassMin', maxId: 'tailMassMax', defaultMin: 0.2, defaultMax: 0.8 },
     { sliderId: 'LD', minId: 'LDMin', maxId: 'LDMax', defaultMin: 4, defaultMax: 12 },
     { sliderId: 'clslope', minId: 'clslopeMin', maxId: 'clslopeMax', defaultMin: 0.04, defaultMax: 0.14 },
     { sliderId: 'clmax', minId: 'clmaxMin', maxId: 'clmaxMax', defaultMin: 0.7, defaultMax: 1.5 },
@@ -688,8 +742,18 @@ function bindUI(){
     slider.max = maxInput.value;
   });
   
-  ["showHorizon","showFeet","showArc","showLabels","showPhiAngle","phiFollow","showFlow","showChord","showLD","showTableVel","showAxesW","showAxesB","showWeight","showBuoy","showResultants","showTail"]
-    .forEach(id=> S(id).addEventListener('change', draw, {passive:true}));
+  ["showHorizon","showFeet","showArc","showLabels","showPhiAngle","phiFollow","showFlow","showChord","showLD","showTableVel","showAxesW","showAxesB","showWeight","showComponentWeights","showBuoy","showResultants","showTail","showGeometry"]
+    .forEach(id=> {
+      const el = S(id);
+      if (el) {
+        el.addEventListener('change', (e) => {
+          console.log(`Checkbox ${id} changed to: ${e.target.checked}`);
+          draw();
+        }, {passive:true});
+      } else {
+        console.warn(`Checkbox ${id} not found!`);
+      }
+    });
   S('playPause').addEventListener('click', togglePlayPause);
   S('testCharts').addEventListener('click', testCharts);
   S('fwd').addEventListener('click', ()=> step(+1));
@@ -699,6 +763,51 @@ function bindUI(){
   S('panU').addEventListener('click', ()=>{ pan.y -= 18; draw(); });
   S('panD').addEventListener('click', ()=>{ pan.y += 18; draw(); });
   S('pan0').addEventListener('click', ()=>{ pan={x:0,y:0}; draw(); });
+  
+  // Controles de zoom global
+  S('zoomIn').addEventListener('click', ()=>{
+    const p = P();
+    // Aumentar ambas escalas (zoom in)
+    const newHscale = Math.min(p.hscale * 1.2, 240); // Máximo 240
+    const newVscale = Math.min(p.vscale * 1.2, 2000); // Máximo 2000
+    const newVelscale = Math.min((p.velscale || 1) * 1.2, 6); // Máximo 6
+    const newFuerzascale = Math.min((p.fuerzascale || 1) * 1.2, 6); // Máximo 6
+    
+    // Actualizar los sliders correspondientes
+    const hscaleSlider = S('hscale');
+    const vscaleSlider = S('vscale');
+    const velscaleSlider = S('velscale');
+    const fuerzascaleSlider = S('fuerzascale');
+    if (hscaleSlider) hscaleSlider.value = newHscale;
+    if (vscaleSlider) vscaleSlider.value = newVscale;
+    if (velscaleSlider) velscaleSlider.value = newVelscale;
+    if (fuerzascaleSlider) fuerzascaleSlider.value = newFuerzascale;
+    
+    // Forzar actualización
+    updateAll();
+  });
+  
+  S('zoomOut').addEventListener('click', ()=>{
+    const p = P();
+    // Disminuir ambas escalas (zoom out)
+    const newHscale = Math.max(p.hscale / 1.2, 60); // Mínimo 60
+    const newVscale = Math.max(p.vscale / 1.2, 200); // Mínimo 200
+    const newVelscale = Math.max((p.velscale || 1) / 1.2, 0.1); // Mínimo 0.1
+    const newFuerzascale = Math.max((p.fuerzascale || 1) / 1.2, 0.1); // Mínimo 0.1
+    
+    // Actualizar los sliders correspondientes
+    const hscaleSlider = S('hscale');
+    const vscaleSlider = S('vscale');
+    const velscaleSlider = S('velscale');
+    const fuerzascaleSlider = S('fuerzascale');
+    if (hscaleSlider) hscaleSlider.value = newHscale;
+    if (vscaleSlider) vscaleSlider.value = newVscale;
+    if (velscaleSlider) velscaleSlider.value = newVelscale;
+    if (fuerzascaleSlider) fuerzascaleSlider.value = newFuerzascale;
+    
+    // Forzar actualización
+    updateAll();
+  });
   S('centerTable').addEventListener('click', ()=>{
     // Obtener parámetros actuales
     const p = P();
@@ -722,12 +831,12 @@ function bindUI(){
     pan.x = centerX - (xAnchor - cx + centerX);
     pan.y = centerY - (yAnchor - cy + centerY);
     
-    console.log('CenterTable Debug:', {
-      phiDeg, phi, mastH, foilDist,
-      xAnchor, yAnchor, cx, cy,
-      centerX, centerY,
-      newPanX: pan.x, newPanY: pan.y
-    });
+    // console.log('CenterTable Debug:', {
+    //   phiDeg, phi, mastH, foilDist,
+    //   xAnchor, yAnchor, cx, cy,
+    //   centerX, centerY,
+    //   newPanX: pan.x, newPanY: pan.y
+    // });
     
     draw();
   });
@@ -747,7 +856,7 @@ function bindUI(){
 function P(){
   const params = {
     V0: getValue("v0", 3.5), phi0: getValue("phi", 0), theta0: getValue("theta0", 3), gamma0: getValue("gamma0", 0),
-    S: getValue("S", 0.12), rho: getValue("rho", 1025), mass: getValue("mass", 75), LD: getValue("LD", 10),
+    S: getValue("S", 0.12), rho: getValue("rho", 1025), mass: getValue("mass", 75), boardMass: getValue("boardMass", 5.5), foilMass: getValue("foilMass", 2.0), tailMass: getValue("tailMass", 0.5), LD: getValue("LD", 10),
     clslope: getValue("clslope", 0.08), clmax: getValue("clmax", 1.2), astall: getValue("stall", 15),
     freq: getValue("freq", 1.5), ampV: getValue("ampV", 0.5), ampT: getValue("ampT", 5), ampG: getValue("ampG", 5),
     phaseT: getValue("phaseT", 0), phaseG: getValue("phaseG", 180), dt: getValue("dtStep", 0.01),
@@ -759,7 +868,7 @@ function P(){
     tailOffsetX: getValue("tailOffsetX", 0.6), tailOffsetZ: getValue("tailOffsetZ", 0.02),
     foilChord: getValue("foilChord", 0.25), tailChord: getValue("tailChord", 0.15),
     tailArea: getValue("tailArea", 0.025), tailLength: getValue("tailLength", 0.6), tailIncidence: getValue("tailIncidence", 0),
-    show:{ horizon: getChecked("showHorizon", true), feet: getChecked("showFeet", true), arc: getChecked("showArc", true), labels: getChecked("showLabels", true), flow: getChecked("showFlow", true), chord: getChecked("showChord", true), LD: getChecked("showLD", true), tail: getChecked("showTail", true), foil: getChecked("showFoil", true), tableVel: getChecked("showTableVel", true), phiFollow: getChecked("phiFollow", true), axesW: getChecked("showAxesW", false), axesB: getChecked("showAxesB", false), weight: getChecked("showWeight", false), buoy: getChecked("showBuoy", false), result: getChecked("showResultants", false), phiAngle: getChecked("showPhiAngle", true), geometry: getChecked("showGeometry", false) }
+    show:{ horizon: getChecked("showHorizon", true), feet: getChecked("showFeet", true), arc: getChecked("showArc", true), labels: getChecked("showLabels", true), flow: getChecked("showFlow", true), chord: getChecked("showChord", true), LD: getChecked("showLD", true), tail: getChecked("showTail", true), foil: getChecked("showFoil", true), tableVel: getChecked("showTableVel", true), phiFollow: getChecked("phiFollow", true), axesW: getChecked("showAxesW", false), axesB: getChecked("showAxesB", false), weight: getChecked("showWeight", false), componentWeights: getChecked("showComponentWeights", false), buoy: getChecked("showBuoy", false), result: getChecked("showResultants", false), phiAngle: getChecked("showPhiAngle", true), geometry: getChecked("showGeometry", false) }
   };
 
   return params;
@@ -780,7 +889,11 @@ function labelRefresh(p, inst = null){
     S("Sv").textContent=(p.S || 0).toFixed(3); S("rhov").textContent=(p.rho || 0).toFixed(0);
     S("tailAreav").textContent=(p.tailArea || 0).toFixed(3); S("tailLengthv").textContent=(p.tailLength || 0).toFixed(2);
     S("tailIncidencev").textContent=(p.tailIncidence || 0).toFixed(1);
-    S("massv").textContent=(p.mass || 0).toFixed(0); S("LDv").textContent=(p.LD || 0).toFixed(1);
+    S("massv").textContent=(p.mass || 0).toFixed(0); 
+    S("boardMassv").textContent=(p.boardMass || 0).toFixed(1);
+    S("foilMassv").textContent=(p.foilMass || 0).toFixed(1);
+    S("tailMassv").textContent=(p.tailMass || 0).toFixed(1);
+    S("LDv").textContent=(p.LD || 0).toFixed(1);
     S("clslopev").textContent=(p.clslope || 0).toFixed(3); S("clmaxv").textContent=(p.clmax || 0).toFixed(2);
     S("stallv").textContent=(p.astall || 0).toFixed(1);
     S("freqv").textContent=(p.freq || 0).toFixed(2); S("ampVv").textContent=(p.ampV || 0).toFixed(2);
@@ -912,11 +1025,12 @@ function calculateEffectiveMomentOfInertia(p) {
   
   // Dimensiones de la cola
   const tailChord = p.tailChord || Math.sqrt(p.tailArea || 0.025);
+  const tailSpan = (p.tailArea || 0.025) / tailChord;
   
   // Momentos de inercia individuales alrededor de sus centros
   const I_board = (1/12) * boardMass * boardLength * boardLength;
   const I_foil = (1/12) * foilMass * (foilChord * foilChord + foilSpan * foilSpan);
-  const I_tail = (1/12) * tailMass * (tailChord * tailChord + (p.tailOffsetX || 0.6) * (p.tailOffsetX || 0.6));
+  const I_tail = (1/12) * tailMass * (tailChord * tailChord + tailSpan * tailSpan);
   
   // Posiciones en coordenadas LOCALES
   const boardX = 0, boardZ = 0;
@@ -937,13 +1051,19 @@ function calculateEffectiveMomentOfInertia(p) {
 
 // Función para convertir coordenadas locales de la tabla a coordenadas globales
 function localToGlobal(localX, localZ, phi, mastH, hscale, vscale, cx, cy) {
+  // Validar parámetros de entrada
+  if (isNaN(localX) || isNaN(localZ) || isNaN(phi) || isNaN(mastH) || isNaN(hscale) || isNaN(vscale) || isNaN(cx) || isNaN(cy)) {
+    console.warn('localToGlobal recibió parámetros NaN:', { localX, localZ, phi, mastH, hscale, vscale, cx, cy });
+    return { x: cx || 0, y: cy || 0 }; // Devolver coordenadas base si hay NaN
+  }
+
   // phi en radianes
   // localX: distancia horizontal desde el centro de la tabla (positivo = hacia adelante)
   // localZ: distancia vertical desde la tabla (positivo = hacia arriba)
   
-  // Dirección del mástil (desde tabla hacia arriba)
-  const mastDirX = -Math.sin(phi);
-  const mastDirY = -Math.cos(phi);
+  // Dirección del mástil (desde tabla hacia arriba - dirección opuesta al original)
+  const mastDirX = Math.sin(phi);
+  const mastDirY = Math.cos(phi);
   
   // Posición base del extremo del mástil
   const foilDistance = Math.min(200, mastH * hscale);
@@ -954,9 +1074,9 @@ function localToGlobal(localX, localZ, phi, mastH, hscale, vscale, cx, cy) {
   const offsetXPx = localX * hscale;
   const offsetZPx = localZ * vscale;
   
-  // Dirección perpendicular al mástil (para offsetZ)
+  // Dirección perpendicular al mástil (ajustada para el nuevo sistema)
   const perpDirX = Math.cos(phi);
-  const perpDirY = Math.sin(phi);
+  const perpDirY = -Math.sin(phi);
   
   // Aplicar transformación de coordenadas locales a globales
   const globalX = baseX + mastDirX * offsetXPx + perpDirX * offsetZPx;
@@ -967,10 +1087,14 @@ function localToGlobal(localX, localZ, phi, mastH, hscale, vscale, cx, cy) {
 
 // Función para calcular el centro de masa del sistema
 function calculateCenterOfMass(p) {
-  // Masas de cada componente
-  const boardMass = p.mass * 0.7;
-  const foilMass = p.mass * 0.25;
-  const tailMass = p.mass * 0.05;
+  // Masas independientes de cada componente
+  const riderMass = p.mass || 75;  // Masa del rider
+  const boardMass = p.boardMass || 5.5;  // Masa de la tabla
+  const foilMass = p.foilMass || 2.0;    // Masa del foil
+  const tailMass = p.tailMass || 0.5;    // Masa de la cola
+  
+  // Masa total del sistema
+  const totalMass = riderMass + boardMass + foilMass + tailMass;
   
   // Posiciones en coordenadas LOCALES de la tabla
   // Centro de la tabla: origen del sistema local
@@ -985,17 +1109,20 @@ function calculateCenterOfMass(p) {
   const tailZ = foilZ + (p.tailOffsetZ || 0.02); // Altura relativa
   
   // Calcular posiciones de masa para cada componente
-  const totalMass = boardMass + foilMass + tailMass;
-  
   // Centro de masa en coordenadas LOCALES
-  const cmX = (boardMass * boardX + foilMass * foilX + tailMass * tailX) / totalMass;
-  const cmZ = (boardMass * boardZ + foilMass * foilZ + tailMass * tailZ) / totalMass;
+  // Rider se asume en el centro de la tabla (0, 0)
+  const riderX = 0, riderZ = 0;
+  const cmX = (riderMass * riderX + boardMass * boardX + foilMass * foilX + tailMass * tailX) / totalMass;
+  const cmZ = (riderMass * riderZ + boardMass * boardZ + foilMass * foilZ + tailMass * tailZ) / totalMass;
   
   return { x: cmX, z: cmZ };
 }
 
 // Función para dibujar la geometría del sistema (opcional, para visualización)
 function drawSystemGeometry(svg, p, scale, cx, cy) {
+  console.log('=== INICIO drawSystemGeometry ===');
+  console.log('Parámetros:', { scale, cx, cy, phi0: p.phi0 });
+  
   // Dibujar geometría del sistema siempre (no solo cuando está habilitado el checkbox)
   // if (!p.show.geometry) return;  // Comentado para que se dibuje siempre
   
@@ -1007,17 +1134,44 @@ function drawSystemGeometry(svg, p, scale, cx, cy) {
   const cm = calculateCenterOfMass(p);
   const cmGlobal = localToGlobal(cm.x, cm.z, phi, p.mastH, p.hscale, p.vscale, cx, cy);
   
-  // Dibujar centro de masa
+  // Dibujar centro de masa con indicador más visible
   const cmCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
   cmCircle.setAttribute('cx', cmGlobal.x);
   cmCircle.setAttribute('cy', cmGlobal.y);
-  cmCircle.setAttribute('r', Math.max(2, 4 * (scale / 600))); // Escalar el radio proporcionalmente
+  cmCircle.setAttribute('r', Math.max(4, 8 * (scale / 600))); // Radio más grande
   cmCircle.setAttribute('fill', '#ff4444');
   cmCircle.setAttribute('stroke', '#000');
-  cmCircle.setAttribute('stroke-width', Math.max(0.5, 1 * (scale / 600))); // Escalar el ancho del borde
+  cmCircle.setAttribute('stroke-width', Math.max(1, 2 * (scale / 600))); // Borde más grueso
+  cmCircle.setAttribute('opacity', '0.8');
   svg.appendChild(cmCircle);
   
-  // Etiqueta del centro de masa
+  // Cruz para marcar el centro exacto
+  const crossSize = Math.max(3, 6 * (scale / 600));
+  const cross = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  
+  // Línea horizontal
+  const hLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  hLine.setAttribute('x1', cmGlobal.x - crossSize);
+  hLine.setAttribute('y1', cmGlobal.y);
+  hLine.setAttribute('x2', cmGlobal.x + crossSize);
+  hLine.setAttribute('y2', cmGlobal.y);
+  hLine.setAttribute('stroke', '#fff');
+  hLine.setAttribute('stroke-width', Math.max(1, 2 * (scale / 600)));
+  cross.appendChild(hLine);
+  
+  // Línea vertical
+  const vLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  vLine.setAttribute('x1', cmGlobal.x);
+  vLine.setAttribute('y1', cmGlobal.y - crossSize);
+  vLine.setAttribute('x2', cmGlobal.x);
+  vLine.setAttribute('y2', cmGlobal.y + crossSize);
+  vLine.setAttribute('stroke', '#fff');
+  vLine.setAttribute('stroke-width', Math.max(1, 2 * (scale / 600)));
+  cross.appendChild(vLine);
+  
+  svg.appendChild(cross);
+  
+  // Etiqueta del centro de masa con coordenadas
   if (p.show.labels) {
     const cmText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
     cmText.setAttribute('x', cmGlobal.x + 8);
@@ -1025,7 +1179,7 @@ function drawSystemGeometry(svg, p, scale, cx, cy) {
     cmText.setAttribute('font-size', Math.max(6, 10 * (scale / 600))); // Escalar el tamaño de fuente
     cmText.setAttribute('fill', '#ff4444');
     cmText.setAttribute('font-weight', 'bold');
-    cmText.textContent = 'CM';
+    cmText.textContent = `CM (${cm.x.toFixed(2)}, ${cm.z.toFixed(2)})`;
     svg.appendChild(cmText);
   }
   
@@ -1034,7 +1188,11 @@ function drawSystemGeometry(svg, p, scale, cx, cy) {
   if (true) {  // Siempre dibujar las líneas de referencia
     const boardScreen = { screenX: cx, screenY: cy }; // Centro de la tabla
     const foilScreen = localToGlobal(p.foilOffsetX || 0.3, p.foilOffsetZ || 0.05, phi, p.mastH, p.hscale, p.vscale, cx, cy);
-    const tailScreen = localToGlobal(p.tailOffsetX || 0.6, p.tailOffsetZ || 0.02, phi, p.mastH, p.hscale, p.vscale, cx, cy);
+    const tailScreen = localToGlobal(
+      (p.foilOffsetX || 0.3) + (p.tailOffsetX || 0.6),
+      (p.foilOffsetZ || 0.05) + (p.tailOffsetZ || 0.02),
+      phi, p.mastH, p.hscale, p.vscale, cx, cy
+    );
     
     // Líneas punteadas para mostrar posiciones
     const line = (x1, y1, x2, y2, color = '#666', dash = '2,2') => {
@@ -1053,33 +1211,29 @@ function drawSystemGeometry(svg, p, scale, cx, cy) {
     line(cmGlobal.x, cmGlobal.y, foilScreen.x, foilScreen.y, '#2e7d32');
     line(cmGlobal.x, cmGlobal.y, tailScreen.x, tailScreen.y, '#ff9800');
   }
+  console.log('=== FIN drawSystemGeometry ===');
 }
 
-// Función para calcular el centro de masa efectivo del sistema
-function calculateCenterOfMass(p) {
-  // Masas de cada componente
-  const boardMass = p.mass * 0.7;
-  const foilMass = p.mass * 0.25;
-  const tailMass = p.mass * 0.05;
-  const totalMass = boardMass + foilMass + tailMass;
+// Función para calcular la masa total del sistema
+function getTotalMass(p) {
+  const riderMass = p.mass || 75;
+  const boardMass = p.boardMass || 5.5;
+  const foilMass = p.foilMass || 2.0;
+  const tailMass = p.tailMass || 0.5;
+  return riderMass + boardMass + foilMass + tailMass;
+}
+
+// Función de presets para configuraciones de masa comunes
+function applyMassPreset(preset) {
+  const presets = {
+    'light': { boardMass: 4.2, foilMass: 1.5, tailMass: 0.3 },  // Setup ligero para freestyle
+    'standard': { boardMass: 5.5, foilMass: 2.0, tailMass: 0.5 }, // Setup estándar
+    'heavy': { boardMass: 6.8, foilMass: 2.5, tailMass: 0.7 },   // Setup pesado para downwind
+    'race': { boardMass: 4.8, foilMass: 1.8, tailMass: 0.4 },    // Setup de competición
+    'freestyle': { boardMass: 4.0, foilMass: 1.3, tailMass: 0.25 } // Setup freestyle extremo
+  };
   
-  // Posiciones en coordenadas físicas (x, z)
-  // Centro de tabla como origen
-  const boardX = 0, boardZ = 0;
-  
-  // Foil: offset desde el centro de la tabla
-  const foilX = p.foilOffsetX || 0.3;  // Distancia horizontal desde centro tabla
-  const foilZ = p.foilOffsetZ || 0.05; // Altura sobre la tabla
-  
-  // Cola: offset desde el centro de la tabla (independiente del foil)
-  const tailX = p.tailOffsetX || 0.6;  // Distancia horizontal desde centro tabla
-  const tailZ = p.tailOffsetZ || 0.02; // Altura sobre la tabla
-  
-  // Centro de masa: Σ(m_i * x_i) / Σ(m_i)
-  const cmX = (boardMass * boardX + foilMass * foilX + tailMass * tailX) / totalMass;
-  const cmZ = (boardMass * boardZ + foilMass * foilZ + tailMass * tailZ) / totalMass;
-  
-  return { x: cmX, z: cmZ, totalMass };
+  return presets[preset] || presets['standard'];
 }
 
 // RHS: Xdot = f(t, X, p)
@@ -1089,7 +1243,7 @@ function rhs(t, st, p){
   const buoy = buoyancyZ(p, st.z);
 
   const Fx = hydro.Lx + hydro.Dx - dyn.cu*st.u;            // + Fwing_x si se quiere
-  const Fz = hydro.Ly + hydro.Dy + buoy.Fb - p.mass*9.81 - p.cw*st.w;
+  const Fz = hydro.Ly + hydro.Dy + buoy.Fb - getTotalMass(p)*9.81 - p.cw*st.w;
 
   const M = totalMoment(p, hydro, Mr, st.theta, st.q);
 
@@ -1098,8 +1252,8 @@ function rhs(t, st, p){
 
   const dx  = st.u;
   const dz  = st.w;
-  const du  = Fx / p.mass;
-  const dw  = Fz / p.mass;
+  const du  = Fx / getTotalMass(p);
+  const dw  = Fz / getTotalMass(p);
   const dth = st.q;
   const dq  = M  / I_effective;
 
@@ -1207,19 +1361,13 @@ function buoyancy(p, h){
   const tb = Math.min(1.0, Vb/Ab);
   const Lm = Math.max(0.8, p.boardLen);
   const y_anchor = h + p.mastH; // marco W (y=0 superficie)
-  const phiDeg = p.show.phiFollow ? (p.phi0 - p.Kphi*(riderFM(p,t).Mr)) : p.phi0;
+  // Para buoyancy, usar phi0 directamente (no phiFollow) ya que no tenemos acceso a inst.Mr
+  let phiDeg = p.phi0 || 0;
 
-  // DEBUG: Validar que no haya NaN en phiDeg
-  if (isNaN(phiDeg) || isNaN(p.phi0) || (p.show.phiFollow && (isNaN(p.Kphi) || isNaN(riderFM(p,t).Mr)))) {
-    console.error('NaN detectado en phiDeg (buoyancy):', {
-      phiDeg,
-      p_phi0: p.phi0,
-      p_Kphi: p.Kphi,
-      riderFM_Mr: riderFM(p,t).Mr,
-      phiFollow: p.show.phiFollow
-    });
-    // Usar valor por defecto si hay NaN
-    phiDeg = p.phi0 || 0;
+  // Validar que no haya NaN en phiDeg
+  if (isNaN(phiDeg)) {
+    console.warn('NaN detectado en phiDeg (buoyancy), usando valor por defecto');
+    phiDeg = 0;
   }
 
   const phi = phiDeg*Math.PI/180;
@@ -1311,7 +1459,7 @@ function step(dir){
   
   ins = { alpha:X._out.alpha, gamma:X._out.gamma, L:X._out.L, D:X._out.D,
           Th:X._out.Th, Vert:X._out.Vert, V:X.u, Ff, Fb,
-          Sup: ((X._out.Vert + buoyancy(p,h).Fb) / (p.mass*9.81))*100,
+          Sup: ((X._out.Vert + buoyancy(p,h).Fb) / (getTotalMass(p)*9.81))*100,
           theta_eff: X.theta*180/Math.PI, Mr:X._out.Mr,
           tail_L: X._out.tail_L, tail_D: X._out.tail_D, tail_Lx: X._out.tail_Lx, tail_Ly: X._out.tail_Ly, tail_Dx: X._out.tail_Dx, tail_Dy: X._out.tail_Dy };
 
@@ -1328,6 +1476,9 @@ function step(dir){
 
 function draw(instOpt){
   try {
+    // DIAGNÓSTICO: Verificar estado de checkboxes
+    diagnoseCheckboxes();
+    
     const p = P(); 
     
     // Verificar que p esté definido correctamente
@@ -1357,7 +1508,7 @@ function draw(instOpt){
         Ff, Fb,
         theta_eff: initialState.theta*180/Math.PI,
         Mr,
-        Sup: ((hydro.Ly + hydro.Dy + buoy.Fb) / (p.mass*9.81))*100,
+        Sup: ((hydro.Ly + hydro.Dy + buoy.Fb) / (getTotalMass(p)*9.81))*100,
         tail_L: hydro.tail_L,
         tail_D: hydro.tail_D,
         tail_Lx: hydro.tail_Lx,
@@ -1402,13 +1553,20 @@ function draw(instOpt){
   const horizonY=hpx*0.45 + pan.y;
   const cy=(hpx*0.62 + pan.y) - h*scale;
 
+  // Verificar coordenadas de dibujo
+  console.log('=== COORDENADAS DE DIBUJO ===');
+  console.log('cx:', cx, 'cy:', cy, 'scale:', scale);
+  console.log('wpx:', wpx, 'hpx:', hpx);
+  console.log('pan.x:', pan.x, 'pan.y:', pan.y, 'h:', h);
+  console.log('Viewport visible: x=0 to', wpx, 'y=0 to', hpx);
+
   // DEBUG: Mostrar parámetros de visualización
-  console.log('DEBUG Viewport:', {
-    wpx, hpx, scale, pan,
-    cx, cy, horizonY, h,
-    svgClientWidth: svg.clientWidth,
-    svgClientHeight: svg.clientHeight
-  });
+  // console.log('DEBUG Viewport:', {
+  //   wpx, hpx, scale, pan,
+  //   cx, cy, horizonY, h,
+  //   svgClientWidth: svg.clientWidth,
+  //   svgClientHeight: svg.clientHeight
+  // });
 
   // Calcular coordenadas físicas del centro de la tabla para KPIs
   // Primero calcular la posición del ancla de la tabla (igual que en el dibujo)
@@ -1428,19 +1586,24 @@ function draw(instOpt){
   const tableZ = 0;                                     // Posición en profundidad (m)
 
   // DEBUG: Mostrar coordenadas calculadas
-  console.log('DEBUG KPIs Tabla:', {
-    phiDegCalc, phiCalc, foilDistanceCalc,
-    xAnchorCalc, yAnchorCalc,
-    tableCenterX_px, tableCenterY_px,
-    tableX, tableY, tableZ,
-    cx, cy, wpx, hpx, scale,
-    h, inst_Mr: inst.Mr, p_Kphi: p.Kphi
-  });
+  // console.log('DEBUG KPIs Tabla:', {
+  //   phiDegCalc, phiCalc, foilDistanceCalc,
+  //   xAnchorCalc, yAnchorCalc,
+  //   tableCenterX_px, tableCenterY_px,
+  //   tableX, tableY, tableZ,
+  //   cx, cy, wpx, hpx, scale,
+  //   h, inst_Mr: inst.Mr, p_Kphi: p.Kphi
+  // });
 
   // Actualizar KPIs de posición de la tabla
   S("tableX").textContent = tableX.toFixed(3);
   S("tableY").textContent = tableY.toFixed(3);
   S("tableZ").textContent = tableZ.toFixed(3);
+  
+  // Actualizar KPIs del centro de masa
+  const cm = calculateCenterOfMass(p);
+  S("cmXOut").textContent = cm.x.toFixed(3);
+  S("cmZOut").textContent = cm.z.toFixed(3);
 
   // helpers
   const line=(x1,y1,x2,y2,stroke="#000",w2=1)=>{const L=document.createElementNS('http://www.w3.org/2000/svg','line'); L.setAttribute('x1',x1);L.setAttribute('y1',y1);L.setAttribute('x2',x2);L.setAttribute('y2',y2); L.setAttribute('stroke',stroke);L.setAttribute('stroke-width',w2); svg.appendChild(L); return L; };
@@ -1459,6 +1622,13 @@ function draw(instOpt){
     return 'url(#'+id+')';
   }
   function arrow2(x1,y1,x2,y2,stroke='#000',w2=2, tooltip=''){
+    // Validar que las coordenadas no sean NaN
+    if (isNaN(x1) || isNaN(y1) || isNaN(x2) || isNaN(y2)) {
+      console.warn('arrow2 recibió coordenadas NaN:', { x1, y1, x2, y2 });
+      return; // No dibujar la flecha si hay coordenadas inválidas
+    }
+
+    console.log('Creando flecha:', 'x1:', x1, 'y1:', y1, 'x2:', x2, 'y2:', y2, 'stroke:', stroke, 'w2:', w2);
     const L=document.createElementNS('http://www.w3.org/2000/svg','line');
     L.setAttribute('x1',x1);L.setAttribute('y1',y1);L.setAttribute('x2',x2);L.setAttribute('y2',y2);
     L.setAttribute('stroke',stroke);L.setAttribute('stroke-width',w2);
@@ -1562,23 +1732,21 @@ function draw(instOpt){
     svg.appendChild(lbl);
   }
 
-  // φ efectivo
-  const phiDeg = p.show.phiFollow ? (p.phi0 - p.Kphi*inst.Mr) : p.phi0;
+  // φ efectivo - usar valor por defecto inicialmente
+  let phiDeg = p.phi0 || 0;
 
-  // DEBUG: Validar que no haya NaN en phiDeg
-  if (isNaN(phiDeg) || isNaN(p.phi0) || (p.show.phiFollow && (isNaN(p.Kphi) || isNaN(inst.Mr)))) {
-    console.error('NaN detectado en phiDeg (draw):', {
-      phiDeg,
-      p_phi0: p.phi0,
-      p_Kphi: p.Kphi,
-      inst_Mr: inst.Mr,
-      phiFollow: p.show.phiFollow
-    });
-    // Usar valor por defecto si hay NaN
-    phiDeg = p.phi0 || 0;
+  // Si inst está disponible y phiFollow está activado, ajustar phiDeg
+  if (inst && p.show.phiFollow && !isNaN(p.Kphi) && !isNaN(inst.Mr)) {
+    phiDeg = p.phi0 - p.Kphi * inst.Mr;
   }
 
-  const phi = phiDeg*Math.PI/180;
+  // Validar que no haya NaN en phiDeg
+  if (isNaN(phiDeg)) {
+    console.warn('NaN detectado en phiDeg (draw), usando valor por defecto');
+    phiDeg = 0;
+  }
+
+  const phi = phiDeg * Math.PI / 180;
 
   // Geometría tabla
   const Lb=Math.max(40, p.boardLen * (p.hscale||110)); // largo en px para dibujo
@@ -1596,11 +1764,11 @@ function draw(instOpt){
   const yAnchor = foilGlobal.y;
 
   // DEBUG: Mostrar posiciones calculadas
-  console.log('DEBUG Tabla:', {
-    cx, cy, phi: phi*180/Math.PI,
-    xAnchor, yAnchor,
-    Lb, scale: p.hscale
-  });
+  // console.log('DEBUG Tabla:', {
+  //   cx, cy, phi: phi*180/Math.PI,
+  //   xAnchor, yAnchor,
+  //   Lb, scale: p.hscale
+  // });
 
   line(cx, cy, xAnchor, yAnchor, '#444', 3); text(xAnchor+6, yAnchor-6, 'Mástil H');
 
@@ -1768,7 +1936,7 @@ Volumen: ${(p.boardVolL / 1000)?.toFixed(3) || 0.04} m³`;
     const pixStance = Math.min(0.9*Lb, Math.max(10, p.d*(p.hscale||110)));
     const front=[mid[0]+(pixStance/2)*tHat[0], mid[1]+(pixStance/2)*tHat[1]];
     const back =[mid[0]-(pixStance/2)*tHat[0], mid[1]-(pixStance/2)*tHat[1]];
-    const kpx = (40/(p.mass*9.81))*(p.fuerzascale||1);
+    const kpx = (40/(getTotalMass(p)*9.81))*(p.fuerzascale||1);
     const fLen=Math.max(12, kpx*Math.max(0,inst.Ff));
     const bLen=Math.max(12, kpx*Math.max(0,inst.Fb));
     const fTip=[front[0]+fLen*nHat[0], front[1]+fLen*nHat[1]];
@@ -1841,7 +2009,7 @@ Volumen: ${(p.boardVolL / 1000)?.toFixed(3) || 0.04} m³`;
     text(cxb+6,cyb,`Cuerda (φ+θ = ${(phi*180/Math.PI + inst.theta_eff).toFixed(1)}°)`);
   }
   if(p.show.flow){
-    const kpx = (40/(p.mass*9.81)) * (p.velscale||1);
+    const kpx = (40/(getTotalMass(p)*9.81)) * (p.velscale||1);
     // Calcular velocidad del flujo usando parámetros base
     const V_flow = p.V0; // Magnitud del flujo
     const gamma_flow = p.gamma0 * Math.PI/180; // Dirección del flujo en radianes
@@ -1866,7 +2034,7 @@ Volumen: ${(p.boardVolL / 1000)?.toFixed(3) || 0.04} m³`;
 
   // Vectores L/D
   if(p.show.LD){
-    const kpx = (40/(p.mass*9.81)) * (p.fuerzascale||1);
+    const kpx = (40/(getTotalMass(p)*9.81)) * (p.fuerzascale||1);
     const Llen = Math.max(12, kpx*Math.max(0,inst.L));
     const Dlen = Math.max(12, kpx*Math.max(0,inst.D));
     const g = inst.gamma*Math.PI/180;
@@ -1883,10 +2051,10 @@ Volumen: ${(p.boardVolL / 1000)?.toFixed(3) || 0.04} m³`;
     const tailScale = p.hscale || 110; // Escala para dibujar la cola
     const tailLengthPx = (p.tailLength || 0.6) * tailScale;
     
-    // Posición de la cola usando coordenadas locales
-    const tailLocalX = (p.tailOffsetX || 0.6);  // Offset X en metros (local)
-    const tailLocalZ = (p.tailOffsetZ || 0.02); // Offset Z en metros (local)
-    
+    // Posición de la cola relativa al foil usando coordenadas locales
+    const tailLocalX = foilLocalX + (p.tailOffsetX || 0.6);  // Offset X desde el foil
+    const tailLocalZ = foilLocalZ + (p.tailOffsetZ || 0.02); // Offset Z desde el foil
+
     // Usar localToGlobal para transformar coordenadas locales a globales
     const tailGlobal = localToGlobal(tailLocalX, tailLocalZ, phi, mastH, p.hscale, p.vscale, cx, cy);
     const tailCx = tailGlobal.x;
@@ -1940,7 +2108,7 @@ Posición: X=${((tailCx - wpx*0.50) / p.vscale)?.toFixed(3)} m, Y=0 m, Z=${((hpx
     
     // Vectores L/D de la cola
     if(p.show.LD){
-      const kpx = (40/(p.mass*9.81)) * (p.fuerzascale||1);
+      const kpx = (40/(getTotalMass(p)*9.81)) * (p.fuerzascale||1);
       const tailLlen = Math.max(8, kpx*Math.max(0, inst.tail_L || 0));
       const tailDlen = Math.max(8, kpx*Math.max(0, inst.tail_D || 0));
       const g = (inst.gamma || 0)*Math.PI/180;
@@ -1957,12 +2125,12 @@ Posición: X=${((tailCx - wpx*0.50) / p.vscale)?.toFixed(3)} m, Y=0 m, Z=${((hpx
 
   // Vector velocidad de la tabla (en la esquina superior derecha de la tabla)
   if(p.show.tableVel){
-    const kpx = (40/(p.mass*9.81)) * (p.velscale||1);
+    const kpx = (40/(getTotalMass(p)*9.81)) * (p.velscale||1);
     
     // Verificar si inst.V es válido
-    if (isNaN(inst.V) || inst.V === undefined) {
-      console.warn('inst.V is invalid:', inst.V);
-      return;
+    if (isNaN(inst.V) || inst.V === undefined || inst.V === null) {
+      console.warn('inst.V is invalid, using default value:', inst.V);
+      inst.V = 3.5; // Valor por defecto razonable
     }
     
     const Vx = kpx * inst.V; // Componente horizontal
@@ -1982,18 +2150,18 @@ Posición: X=${((tailCx - wpx*0.50) / p.vscale)?.toFixed(3)} m, Y=0 m, Z=${((hpx
 
   // Peso, Arquímedes, Resultantes
   if(p.show.weight){
-    const mg=p.mass*9.81; const k=(40/(p.mass*9.81))*(p.fuerzascale||1);
+    const mg=getTotalMass(p)*9.81; const k=(40/(getTotalMass(p)*9.81))*(p.fuerzascale||1);
     arrow2(cx, cy, cx, cy + Math.max(12,k*mg), '#222', 2.5,
-           `Peso total: ${(p.mass*9.81)?.toFixed(0) || 0} N\nFuerza de gravedad actuando sobre el sistema rider+tabla`);
+           `Peso total: ${(getTotalMass(p)*9.81)?.toFixed(0) || 0} N\nFuerza de gravedad actuando sobre el sistema rider+tabla`);
     text(cx+6, cy+22, 'mg');
   }
   if(p.show.buoy && B.draft>0){
-    const k=(40/(p.mass*9.81))*(p.fuerzascale||1);
+    const k=(40/(getTotalMass(p)*9.81))*(p.fuerzascale||1);
     arrow2(xAnchor, yAnchor, xAnchor, yAnchor - Math.max(12,k*B.Fb), '#0a6', 2.5,
            `Empuje de Arquímedes: ${B.Fb?.toFixed(0) || 0} N\nFuerza de flotabilidad debida al volumen sumergido de la tabla`);
   }
   if(p.show.result){
-    const mg=p.mass*9.81; const k=(40/(p.mass*9.81))*(p.fuerzascale||1);
+    const mg=getTotalMass(p)*9.81; const k=(40/(getTotalMass(p)*9.81))*(p.fuerzascale||1);
     const VertRes = inst.Vert + B.Fb - mg;
     const dirv = VertRes>=0 ? -1 : 1;
     arrow2(cx, cy, cx, cy + dirv*Math.max(12, Math.abs(k*VertRes)), '#a0a', 2.5,
@@ -2002,10 +2170,88 @@ Posición: X=${((tailCx - wpx*0.50) / p.vscale)?.toFixed(3)} m, Y=0 m, Z=${((hpx
            `Fuerza horizontal resultante: ${inst.Th?.toFixed(0) || 0} N\nEmpuje neto horizontal (propulsión - arrastre)`);
   }
 
+  // Pesos individuales de componentes
+  if(p.show.componentWeights){
+    console.log('DIBUJANDO PESOS DE COMPONENTES');
+    const phi_local = (p.phi0 || 0) * Math.PI / 180;
+    const g = 9.81; // Aceleración de la gravedad
+    const k = (40/(getTotalMass(p)*9.81)) * (p.fuerzascale || 1); // Factor de escala para vectores
+    console.log('Factor de escala k:', k, 'Total mass:', getTotalMass(p));
+    console.log('Pesos calculados - Tabla:', boardWeight, 'Foil:', foilWeight, 'Cola:', tailWeight);
+
+    // Validar coordenadas base
+    if (isNaN(cx) || isNaN(cy)) {
+      console.warn('Coordenadas base inválidas para vectores de peso');
+      return;
+    }
+
+    // Centro de la tabla
+    const boardWeight = (p.boardMass || 5.5) * g;
+    const boardScreen = { screenX: cx, screenY: cy };
+    console.log('Centro tabla:', 'x:', boardScreen.screenX, 'y:', boardScreen.screenY, 'Peso:', boardWeight);
+    console.log('¿Visible en viewport?', boardScreen.screenX >= 0 && boardScreen.screenX <= wpx && boardScreen.screenY >= 0 && boardScreen.screenY <= hpx);
+    if (!isNaN(boardScreen.screenX) && !isNaN(boardScreen.screenY)) {
+      const arrowLength = Math.max(8, k * boardWeight);
+      console.log('Longitud flecha tabla:', arrowLength, '(min 8)');
+      console.log('Dibujando flecha tabla:', 'x1:', boardScreen.screenX, 'y1:', boardScreen.screenY, 'x2:', boardScreen.screenX, 'y2:', boardScreen.screenY + arrowLength);
+      arrow2(boardScreen.screenX, boardScreen.screenY,
+             boardScreen.screenX, boardScreen.screenY + arrowLength,
+             '#8B4513', 2.0,
+             `Peso tabla: ${boardWeight.toFixed(1)} N\nMasa: ${(p.boardMass || 5.5).toFixed(1)} kg`);
+    }
+
+    // Centro del foil
+    const foilWeight = (p.foilMass || 2.0) * g;
+    const foilScreen = localToGlobal(p.foilOffsetX || 0.3, p.foilOffsetZ || 0.05, phi_local, p.mastH || 0.8, p.hscale || 80, p.vscale || 300, cx, cy);
+    console.log('Centro foil:', 'x:', foilScreen.x, 'y:', foilScreen.y, 'Peso:', foilWeight);
+    console.log('¿Visible en viewport?', foilScreen.x >= 0 && foilScreen.x <= wpx && foilScreen.y >= 0 && foilScreen.y <= hpx);
+    if (!isNaN(foilScreen.x) && !isNaN(foilScreen.y)) {
+      const arrowLength = Math.max(8, k * foilWeight);
+      console.log('Longitud flecha foil:', arrowLength, '(min 8)');
+      console.log('Dibujando flecha foil:', 'x1:', foilScreen.x, 'y1:', foilScreen.y, 'x2:', foilScreen.x, 'y2:', foilScreen.y + arrowLength);
+      arrow2(foilScreen.x, foilScreen.y,
+             foilScreen.x, foilScreen.y + arrowLength,
+             '#4169E1', 2.0,
+             `Peso foil: ${foilWeight.toFixed(1)} N\nMasa: ${(p.foilMass || 2.0).toFixed(1)} kg`);
+    }
+
+    // Centro de la cola
+    const tailWeight = (p.tailMass || 0.5) * g;
+    const tailScreen = localToGlobal(
+      (p.foilOffsetX || 0.3) + (p.tailOffsetX || 0.6),
+      (p.foilOffsetZ || 0.05) + (p.tailOffsetZ || 0.02),
+      phi_local, p.mastH || 0.8, p.hscale || 80, p.vscale || 300, cx, cy
+    );
+    console.log('Centro cola:', 'x:', tailScreen.x, 'y:', tailScreen.y, 'Peso:', tailWeight);
+    console.log('¿Visible en viewport?', tailScreen.x >= 0 && tailScreen.x <= wpx && tailScreen.y >= 0 && tailScreen.y <= hpx);
+    if (!isNaN(tailScreen.x) && !isNaN(tailScreen.y)) {
+      const arrowLength = Math.max(8, k * tailWeight);
+      console.log('Longitud flecha cola:', arrowLength, '(min 8)');
+      console.log('Dibujando flecha cola:', 'x1:', tailScreen.x, 'y1:', tailScreen.y, 'x2:', tailScreen.x, 'y2:', tailScreen.y + arrowLength);
+      arrow2(tailScreen.x, tailScreen.y,
+             tailScreen.x, tailScreen.y + arrowLength,
+             '#228B22', 2.0,
+             `Peso cola: ${tailWeight.toFixed(1)} N\nMasa: ${(p.tailMass || 0.5).toFixed(1)} kg`);
+    }
+    
+    console.log('Total de elementos en SVG después de pesos:', svg.children.length);
+    console.log('Últimos elementos agregados:', Array.from(svg.children).slice(-3).map(el => el.tagName + (el.getAttribute('stroke') ? `(${el.getAttribute('stroke')})` : '')));
+  }
+
   // Dibujar geometría del sistema (centro de masa, posiciones relativas)
-  drawSystemGeometry(svg, p, scale, cx, cy);
+  if (p.show.geometry) {
+    console.log('DIBUJANDO GEOMETRÍA DEL SISTEMA');
+    console.log('Elementos en SVG antes de geometría:', svg.children.length);
+    console.log('Llamando drawSystemGeometry con:', { p, scale, cx, cy });
+    drawSystemGeometry(svg, p, scale, cx, cy);
+    console.log('Elementos en SVG después de geometría:', svg.children.length);
+    console.log('Últimos elementos agregados:', Array.from(svg.children).slice(-3).map(el => el.tagName + (el.getAttribute('stroke') ? `(${el.getAttribute('stroke')})` : '')));
+  }
 
   refreshCharts();
+  console.log('=== FIN DEL DIBUJO ===');
+  console.log('Elementos totales en SVG:', svg.children.length);
+  console.log('Últimos 5 elementos:', Array.from(svg.children).slice(-5).map(el => el.tagName + (el.getAttribute('stroke') ? `(${el.getAttribute('stroke')})` : '')));
   } catch (error) {
     console.error('Error en función draw():', error);
     // No relanzar el error para evitar loops infinitos
@@ -2096,8 +2342,20 @@ function drawSeries(svgId, series, colors, ylabel){
   const w = svg.clientWidth||240, h = svg.clientHeight||140;
   const pad = {l:28,r:6,t:6,b:18};
   const W = w-pad.l-pad.r, H = h-pad.t-pad.b;
-  function line(x1,y1,x2,y2,st='#000',w2=1){const L=document.createElementNS('http://www.w3.org/2000/svg','line'); L.setAttribute('x1',x1);L.setAttribute('y1',y1);L.setAttribute('x2',x2);L.setAttribute('y2',y2); L.setAttribute('stroke',st);L.setAttribute('stroke-width',w2); svg.appendChild(L);}
-  function text(x,y,t,fs=10,st='#444'){const T=document.createElementNS('http://www.w3.org/2000/svg','text');T.setAttribute('x',x);T.setAttribute('y',y);T.setAttribute('font-size',fs);T.setAttribute('fill',st);T.textContent=t;svg.appendChild(T);}
+  function line(x1,y1,x2,y2,st='#000',w2=1){
+    if (isNaN(x1) || isNaN(y1) || isNaN(x2) || isNaN(y2)) {
+      console.warn('line recibió coordenadas NaN:', { x1, y1, x2, y2 });
+      return;
+    }
+    const L=document.createElementNS('http://www.w3.org/2000/svg','line'); L.setAttribute('x1',x1);L.setAttribute('y1',y1);L.setAttribute('x2',x2);L.setAttribute('y2',y2); L.setAttribute('stroke',st);L.setAttribute('stroke-width',w2); svg.appendChild(L);
+  }
+  function text(x,y,t,fs=10,st='#444'){
+    if (isNaN(x) || isNaN(y)) {
+      console.warn('text recibió coordenadas NaN:', { x, y });
+      return;
+    }
+    const T=document.createElementNS('http://www.w3.org/2000/svg','text');T.setAttribute('x',x);T.setAttribute('y',y);T.setAttribute('font-size',fs);T.setAttribute('fill',st);T.textContent=t;svg.appendChild(T);
+  }
   const all=[]; series.forEach(arr=>all.push(...arr.filter(v=>!isNaN(v)))); if(all.length===0){ text(8,20,ylabel,10); text(8,35,'Recopilando datos...',8,'#666'); return; }
   const minv = Math.min(...all,0), maxv = Math.max(...all,0);
   const span = (maxv-minv)||1;
@@ -2130,7 +2388,7 @@ function updateAll(){ draw(); }
 
 // Función de prueba para verificar que los gráficos funcionan
 function testCharts() {
-  console.log('=== TEST CHARTS ===');
+  // console.log('=== TEST CHARTS ===');
   // Limpiar datos anteriores
   histAngles.alpha.length = 0;
   histAngles.theta.length = 0;
@@ -2145,7 +2403,7 @@ function testCharts() {
   histForces.Th.push(12.3, 15.7, 9.8, 22.1, 17.4);
   histForces.Fr.push(8.5, 11.2, 6.9, 14.3, 10.6);
   
-  console.log('Added test data, calling refreshCharts...');
+  // console.log('Added test data, calling refreshCharts...');
   refreshCharts();
 }
 

@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Wing Foil – Simulador (v23h7)</title>
+  <title>Wing Foil – Simulador (v23h7-updated)</title>
   <style>
     :root{ --left-w: 381px; --right-w: 189px; }
     body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;margin:0;background:#fafafa;color:#111}
     .wrap{display:grid;grid-template-columns: var(--left-w) 1fr var(--right-w); min-height:100vh;}
     .col{padding:10px 12px}
-    .left{background:#fff;border-right:1px solid #e6e6e6;max-height:80vh;overflow-y:auto}
+    .left{background:#fff;border-right:1px solid #e6e6e6;max-height:95vh;overflow-y:auto}
     .center{background:#fff}
     .right{background:#fff;border-left:1px solid #e6e6e6}
     h1{font-size:16px;margin:6px 0 8px}
@@ -122,6 +122,30 @@
           <input type="number" class="scale-input" step="1" value="55" title="Límite mínimo" id="massMin">
           <input id="mass" type="range" min="55" max="110" step="1" value="82">
           <input type="number" class="scale-input" step="1" value="110" title="Límite máximo" id="massMax">
+        </div>
+      </div>
+      <div class="row">
+        <label title="Masa de la tabla (kg). Masa de la tabla de wing foil. Afecta el centro de masa del sistema.">Tabla (kg) <b id="boardMassv"></b></label>
+        <div class="slider-container">
+          <input type="number" class="scale-input" step="0.1" value="3" title="Límite mínimo" id="boardMassMin">
+          <input id="boardMass" type="range" min="3" max="8" step="0.1" value="5.5">
+          <input type="number" class="scale-input" step="0.1" value="8" title="Límite máximo" id="boardMassMax">
+        </div>
+      </div>
+      <div class="row">
+        <label title="Masa del foil (kg). Masa del ala de foil. Afecta el centro de masa del sistema.">Foil (kg) <b id="foilMassv"></b></label>
+        <div class="slider-container">
+          <input type="number" class="scale-input" step="0.1" value="1" title="Límite mínimo" id="foilMassMin">
+          <input id="foilMass" type="range" min="1" max="3" step="0.1" value="2.0">
+          <input type="number" class="scale-input" step="0.1" value="3" title="Límite máximo" id="foilMassMax">
+        </div>
+      </div>
+      <div class="row">
+        <label title="Masa de la cola (kg). Masa de la cola estabilizadora. Afecta el centro de masa del sistema.">Cola (kg) <b id="tailMassv"></b></label>
+        <div class="slider-container">
+          <input type="number" class="scale-input" step="0.1" value="0.2" title="Límite mínimo" id="tailMassMin">
+          <input id="tailMass" type="range" min="0.2" max="0.8" step="0.1" value="0.5">
+          <input type="number" class="scale-input" step="0.1" value="0.8" title="Límite máximo" id="tailMassMax">
         </div>
       </div>
       <div class="row">
@@ -440,6 +464,8 @@
       <button class="btn" id="panD">↓</button>
       <button class="btn" id="panR">→</button>
       <button class="btn" id="pan0">Reset</button>
+      <button class="btn" id="zoomIn">+</button>
+      <button class="btn" id="zoomOut">−</button>
       <button class="btn" id="centerTable">📍 Centrar Tabla</button>
       <button class="btn" id="state0">Reset estado</button>
     </div>
@@ -459,6 +485,7 @@
       <label><input id="showAxesW" type="checkbox" checked> Ejes globales W</label>
       <label><input id="showAxesB" type="checkbox" checked> Ejes en tabla B</label>
       <label><input id="showWeight" type="checkbox" checked> Mostrar peso (mg)</label>
+      <label><input id="showComponentWeights" type="checkbox"> Mostrar pesos componentes</label>
       <label><input id="showBuoy" type="checkbox" checked> Mostrar Arquímedes</label>
       <label><input id="showResultants" type="checkbox" checked> Mostrar resultantes</label>
       <label><input id="showGeometry" type="checkbox"> Mostrar geometría sistema</label>
@@ -485,6 +512,8 @@
       <div class="kpi"><div class="h" title="Posición X del centro geométrico de la tabla (m). Coordenada horizontal en el sistema de referencia global.">X_tabla (m)</div><div class="v" id="tableX" style="color:#ff6600">—</div></div>
       <div class="kpi"><div class="h" title="Posición Y del centro geométrico de la tabla (m). Altura del centro de presión en el sistema de referencia global.">Y_tabla (m)</div><div class="v" id="tableY" style="color:#ff6600">—</div></div>
       <div class="kpi"><div class="h" title="Posición Z del centro geométrico de la tabla (m). Coordenada de profundidad en el sistema de referencia global.">Z_tabla (m)</div><div class="v" id="tableZ" style="color:#ff6600">—</div></div>
+      <div class="kpi"><div class="h" title="Centro de masa X (m). Coordenada horizontal del centro de masa en coordenadas locales de la tabla.">CM X (m)</div><div class="v" id="cmXOut" style="color:#ff4444">—</div></div>
+      <div class="kpi"><div class="h" title="Centro de masa Z (m). Coordenada vertical del centro de masa en coordenadas locales de la tabla.">CM Z (m)</div><div class="v" id="cmZOut" style="color:#ff4444">—</div></div>
     </div>
     <div class="chartbox"><svg id="chartAngles"></svg></div>
     <div class="chartbox"><svg id="chartForces"></svg></div>

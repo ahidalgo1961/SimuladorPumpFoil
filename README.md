@@ -12,6 +12,8 @@ An interactive web application that simulates the physics and dynamics of wing f
 
 ### **Enhanced User Interface**
 - **Auto-Center Table Button**: "📍 Center Table" button for automatic table positioning
+- **Global Zoom Controls**: "+" and "−" buttons for comprehensive zoom affecting all visual elements
+- **Component Weight Vectors**: Individual weight vectors for board, foil, and tail at their geometric centers
 - **Dynamic Scaling**: Optimized vertical (300 px/m) and horizontal (80 px/m) scales
 - **Improved Debugging**: Console logging for position diagnostics
 
@@ -66,7 +68,13 @@ http://localhost:3001
 ### **Interactive Visualization**
 - **SVG-Based Graphics**: Scalable vector graphics for crisp visualization
 - **Real-Time Updates**: All parameters update simultaneously during simulation
+- **Component Weight Visualization**: Individual weight vectors at geometric centers (brown=board, blue=foil, green=tail)
 - **Pan & Zoom Controls**: Navigate and scale the visualization area
+  - **Zoom In/Out Buttons**: "+" and "−" buttons for comprehensive scaling
+  - **Global Scaling**: Zoom affects all visual elements proportionally (geometry, vectors, forces)
+  - **Scale Factors**: Horizontal scale (80 px/m), Vertical scale (300 px/m)
+  - **Vector Scaling**: Velocity and force vectors scale with zoom (velscale, fuerzascale)
+  - **Zoom Range**: Flexible scaling with automatic adaptation to content
 - **Multiple View Modes**: Show/hide different force vectors and reference frames
 
 ### **Comprehensive KPIs**

@@ -21,7 +21,7 @@ function testGeometryInvariance() {
     // Calcular posiciones globales (deberían cambiar con φ)
     const cmGlobal = localToGlobal(cm.x, cm.z, phiRad, p.mastH, p.hscale, p.vscale, 300, 200);
     const foilGlobal = localToGlobal(p.foilOffsetX, p.foilOffsetZ, phiRad, p.mastH, p.hscale, p.vscale, 300, 200);
-    const tailGlobal = localToGlobal(p.tailOffsetX, p.tailOffsetZ, phiRad, p.mastH, p.hscale, p.vscale, 300, 200);
+    const tailGlobal = localToGlobal(p.foilOffsetX + p.tailOffsetX, p.foilOffsetZ + p.tailOffsetZ, phiRad, p.mastH, p.hscale, p.vscale, 300, 200);
 
     console.log(`φ=${phi}°:`, {
       cmLocal: {x: cm.x.toFixed(3), z: cm.z.toFixed(3)},

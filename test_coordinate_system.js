@@ -25,7 +25,11 @@ function testCoordinateSystem() {
 
   // Calcular posiciones usando localToGlobal
   const foilGlobal = localToGlobal(testParams.foilOffsetX, testParams.foilOffsetZ, phi, testParams.mastH, testParams.hscale, testParams.vscale, cx, cy);
-  const tailGlobal = localToGlobal(testParams.tailOffsetX, testParams.tailOffsetZ, phi, testParams.mastH, testParams.hscale, testParams.vscale, cx, cy);
+  const tailGlobal = localToGlobal(
+    testParams.foilOffsetX + testParams.tailOffsetX,
+    testParams.foilOffsetZ + testParams.tailOffsetZ,
+    phi, testParams.mastH, testParams.hscale, testParams.vscale, cx, cy
+  );
 
   console.log(`Posición Foil Global: (${foilGlobal.x.toFixed(1)}, ${foilGlobal.y.toFixed(1)})`);
   console.log(`Posición Tail Global: (${tailGlobal.x.toFixed(1)}, ${tailGlobal.y.toFixed(1)})`);
