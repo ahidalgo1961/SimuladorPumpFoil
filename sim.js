@@ -504,11 +504,12 @@ function diagnoseCheckboxes() {
   
   // Verificar valores en P()
   const p = P();
-  console.log('=== VALORES EN P().show ===');
-  console.log('componentWeights:', p.show.componentWeights);
-  console.log('geometry:', p.show.geometry);
-  console.log('weight:', p.show.weight);
-  console.log('horizon:', p.show.horizon);
+  console.log('Valores en P().show:', {
+    componentWeights: p.show.componentWeights,
+    geometry: p.show.geometry,
+    weight: p.show.weight,
+    horizon: p.show.horizon
+  });
   
   // Coordenadas de dibujo se mostrarán después de calcular cx, cy
 }
@@ -746,8 +747,23 @@ function bindUI(){
     .forEach(id=> {
       const el = S(id);
       if (el) {
+        // Cargar valor desde localStorage
+        const KEY='wf_persist_v23h7';
+        try{
+          const obj=JSON.parse(localStorage.getItem(KEY)||'{}');
+          if(obj[id]!==undefined && obj[id] !== el.checked) {
+            el.checked=obj[id];
+          }
+        }catch(e){console.error('Error cargando checkbox desde localStorage:', e);}
+        
         el.addEventListener('change', (e) => {
           console.log(`Checkbox ${id} changed to: ${e.target.checked}`);
+          // Guardar en localStorage
+          try{ 
+            const obj=JSON.parse(localStorage.getItem(KEY)||'{}'); 
+            obj[id]=e.target.checked; 
+            localStorage.setItem(KEY, JSON.stringify(obj)); 
+          }catch(e){}
           draw();
         }, {passive:true});
       } else {
@@ -1134,7 +1150,7 @@ function drawSystemGeometry(svg, p, scale, cx, cy) {
   const cm = calculateCenterOfMass(p);
   const cmGlobal = localToGlobal(cm.x, cm.z, phi, p.mastH, p.hscale, p.vscale, cx, cy);
   
-  // Dibujar centro de masa con indicador más visible
+  // Dibujar centro de masa con indicador interactivo
   const cmCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
   cmCircle.setAttribute('cx', cmGlobal.x);
   cmCircle.setAttribute('cy', cmGlobal.y);
@@ -1143,12 +1159,91 @@ function drawSystemGeometry(svg, p, scale, cx, cy) {
   cmCircle.setAttribute('stroke', '#000');
   cmCircle.setAttribute('stroke-width', Math.max(1, 2 * (scale / 600))); // Borde más grueso
   cmCircle.setAttribute('opacity', '0.8');
+  cmCircle.style.cursor = 'pointer'; // Cambiar cursor al pasar el mouse
+
+  // Crear tooltip para el centro de masa
+  const cmTooltipText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  cmTooltipText.setAttribute('x', '0');
+  cmTooltipText.setAttribute('y', '0');
+  cmTooltipText.setAttribute('font-size', '12');
+  cmTooltipText.setAttribute('fill', '#000');
+  cmTooltipText.setAttribute('font-weight', 'bold');
+  cmTooltipText.setAttribute('visibility', 'hidden');
+  cmTooltipText.setAttribute('pointer-events', 'none');
+
+  // Crear rectángulo de fondo para el tooltip
+  const cmTooltipBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+  cmTooltipBg.setAttribute('x', '0');
+  cmTooltipBg.setAttribute('y', '0');
+  cmTooltipBg.setAttribute('width', '0');
+  cmTooltipBg.setAttribute('height', '0');
+  cmTooltipBg.setAttribute('fill', '#ffffff');
+  cmTooltipBg.setAttribute('stroke', '#000');
+  cmTooltipBg.setAttribute('stroke-width', '1');
+  cmTooltipBg.setAttribute('rx', '4');
+  cmTooltipBg.setAttribute('visibility', 'hidden');
+  cmTooltipBg.setAttribute('pointer-events', 'none');
+
+    // Crear líneas de texto usando tspan para mejor control
+    const cmLines = [
+      'Centro de Masa del Sistema',
+      `Global: (${cmGlobal.x.toFixed(1)}, ${cmGlobal.y.toFixed(1)})`,
+      'Sistema W: Y=0 en nivel del agua',
+      'Y > 0: arriba del agua',
+      'Y < 0: abajo del agua'
+    ];  // Eventos de mouse para el centro de masa
+  cmCircle.addEventListener('mouseenter', function(e) {
+    const mouseX = e.clientX - svg.getBoundingClientRect().left;
+    const mouseY = e.clientY - svg.getBoundingClientRect().top;
+
+    // Calcular tamaño del texto para el fondo
+    const lines = cmLines;
+    const maxLineLength = Math.max(...lines.map(line => line.length));
+    const textWidth = maxLineLength * 6 + 20; // Menos ancho para recuadro más estrecho
+    const textHeight = lines.length * 18 + 16; // Más alto para mejor espaciado de varias líneas
+
+    // Posicionar tooltip arriba y a la derecha del mouse
+    const tooltipX = mouseX + 20;
+    const tooltipY = mouseY - textHeight - 15;
+
+    // Limpiar tspan anteriores
+    while (cmTooltipText.firstChild) {
+      cmTooltipText.removeChild(cmTooltipText.firstChild);
+    }
+
+    // Crear tspan para cada línea con posicionamiento consistente
+    cmLines.forEach((line, index) => {
+      const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+      tspan.setAttribute('x', tooltipX + 10);
+      tspan.setAttribute('y', tooltipY + 20 + (index * 16)); // Mejor espaciado vertical
+      tspan.textContent = line;
+      cmTooltipText.appendChild(tspan);
+    });
+
+    cmTooltipBg.setAttribute('x', tooltipX);
+    cmTooltipBg.setAttribute('y', tooltipY);
+    cmTooltipBg.setAttribute('width', textWidth);
+    cmTooltipBg.setAttribute('height', textHeight);
+    cmTooltipBg.setAttribute('visibility', 'visible');
+
+    // El texto ya está posicionado en los tspan
+    cmTooltipText.setAttribute('visibility', 'visible');
+  });
+
+  cmCircle.addEventListener('mouseleave', function() {
+    cmTooltipText.setAttribute('visibility', 'hidden');
+    cmTooltipBg.setAttribute('visibility', 'hidden');
+  });
+
+  // Agregar elementos al SVG
+  svg.appendChild(cmTooltipBg);
+  svg.appendChild(cmTooltipText);
   svg.appendChild(cmCircle);
-  
+
   // Cruz para marcar el centro exacto
   const crossSize = Math.max(3, 6 * (scale / 600));
   const cross = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-  
+
   // Línea horizontal
   const hLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
   hLine.setAttribute('x1', cmGlobal.x - crossSize);
@@ -1158,7 +1253,7 @@ function drawSystemGeometry(svg, p, scale, cx, cy) {
   hLine.setAttribute('stroke', '#fff');
   hLine.setAttribute('stroke-width', Math.max(1, 2 * (scale / 600)));
   cross.appendChild(hLine);
-  
+
   // Línea vertical
   const vLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
   vLine.setAttribute('x1', cmGlobal.x);
@@ -1168,20 +1263,8 @@ function drawSystemGeometry(svg, p, scale, cx, cy) {
   vLine.setAttribute('stroke', '#fff');
   vLine.setAttribute('stroke-width', Math.max(1, 2 * (scale / 600)));
   cross.appendChild(vLine);
-  
+
   svg.appendChild(cross);
-  
-  // Etiqueta del centro de masa con coordenadas
-  if (p.show.labels) {
-    const cmText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    cmText.setAttribute('x', cmGlobal.x + 8);
-    cmText.setAttribute('y', cmGlobal.y - 8);
-    cmText.setAttribute('font-size', Math.max(6, 10 * (scale / 600))); // Escalar el tamaño de fuente
-    cmText.setAttribute('fill', '#ff4444');
-    cmText.setAttribute('font-weight', 'bold');
-    cmText.textContent = `CM (${cm.x.toFixed(2)}, ${cm.z.toFixed(2)})`;
-    svg.appendChild(cmText);
-  }
   
   // Líneas de referencia para mostrar posiciones relativas
   // if (p.show.geometry) {  // Comentado para que se dibuje siempre
@@ -1476,9 +1559,6 @@ function step(dir){
 
 function draw(instOpt){
   try {
-    // DIAGNÓSTICO: Verificar estado de checkboxes
-    diagnoseCheckboxes();
-    
     const p = P(); 
     
     // Verificar que p esté definido correctamente
@@ -1554,11 +1634,7 @@ function draw(instOpt){
   const cy=(hpx*0.62 + pan.y) - h*scale;
 
   // Verificar coordenadas de dibujo
-  console.log('=== COORDENADAS DE DIBUJO ===');
-  console.log('cx:', cx, 'cy:', cy, 'scale:', scale);
-  console.log('wpx:', wpx, 'hpx:', hpx);
-  console.log('pan.x:', pan.x, 'pan.y:', pan.y, 'h:', h);
-  console.log('Viewport visible: x=0 to', wpx, 'y=0 to', hpx);
+  console.log('Coordenadas de dibujo:', { cx, cy, scale, wpx, hpx, pan, h });
 
   // DEBUG: Mostrar parámetros de visualización
   // console.log('DEBUG Viewport:', {
@@ -1628,7 +1704,15 @@ function draw(instOpt){
       return; // No dibujar la flecha si hay coordenadas inválidas
     }
 
-    console.log('Creando flecha:', 'x1:', x1, 'y1:', y1, 'x2:', x2, 'y2:', y2, 'stroke:', stroke, 'w2:', w2);
+    console.log('Creando flecha:', { x1, y1, x2, y2, stroke, w2 });
+    
+    // Obtener referencia al SVG
+    const svg = S("geom");
+    if (!svg) {
+      console.warn('No se pudo encontrar el elemento SVG con id "geom"');
+      return;
+    }
+    
     const L=document.createElementNS('http://www.w3.org/2000/svg','line');
     L.setAttribute('x1',x1);L.setAttribute('y1',y1);L.setAttribute('x2',x2);L.setAttribute('y2',y2);
     L.setAttribute('stroke',stroke);L.setAttribute('stroke-width',w2);
@@ -1641,11 +1725,11 @@ function draw(instOpt){
       tooltipText.setAttribute('x', '0');
       tooltipText.setAttribute('y', '0');
       tooltipText.setAttribute('font-size', '12');
-      tooltipText.setAttribute('fill', stroke); // Usar el mismo color que la flecha
+      tooltipText.setAttribute('fill', '#000000'); // Texto negro para fondo blanco
       tooltipText.setAttribute('font-weight', 'bold');
       tooltipText.setAttribute('visibility', 'hidden');
       tooltipText.setAttribute('pointer-events', 'none');
-      tooltipText.textContent = tooltip;
+      // No establecer textContent inicialmente para evitar conflictos con tspans
       
       // Crear rectángulo de fondo para el tooltip
       const tooltipBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
@@ -1653,8 +1737,10 @@ function draw(instOpt){
       tooltipBg.setAttribute('y', '0');
       tooltipBg.setAttribute('width', '0');
       tooltipBg.setAttribute('height', '0');
-      tooltipBg.setAttribute('fill', 'rgba(0,0,0,0.8)');
-      tooltipBg.setAttribute('rx', '3');
+      tooltipBg.setAttribute('fill', '#ffffff'); // Fondo blanco
+      tooltipBg.setAttribute('stroke', '#000');
+      tooltipBg.setAttribute('stroke-width', '1');
+      tooltipBg.setAttribute('rx', '4');
       tooltipBg.setAttribute('visibility', 'hidden');
       tooltipBg.setAttribute('pointer-events', 'none');
       
@@ -1663,18 +1749,43 @@ function draw(instOpt){
         const mouseX = e.clientX - svg.getBoundingClientRect().left;
         const mouseY = e.clientY - svg.getBoundingClientRect().top;
         
-        tooltipText.setAttribute('x', mouseX + 10);
-        tooltipText.setAttribute('y', mouseY - 10);
-        tooltipText.setAttribute('visibility', 'visible');
+        // Calcular tamaño del texto para el fondo (manejar multilínea)
+        const lines = tooltip.split('\n').filter(line => line.trim().length > 0); // Filtrar líneas vacías
+        const maxLineLength = Math.max(...lines.map(line => line.length));
+        const textWidth = Math.max(maxLineLength * 6 + 20, 100); // Ancho mínimo
+        const textHeight = Math.max(lines.length * 16 + 12, 30); // Alto mínimo
         
-        // Calcular tamaño del texto para el fondo
-        const textWidth = tooltip.length * 6; // Aproximación
-        const textHeight = 16;
-        tooltipBg.setAttribute('x', mouseX + 5);
-        tooltipBg.setAttribute('y', mouseY - 25);
+        // Posicionar tooltip arriba y a la derecha del mouse
+        const tooltipX = mouseX + 15;
+        const tooltipY = mouseY - textHeight - 10;
+        
+        // Limpiar tspan anteriores si existen
+        while (tooltipText.firstChild) {
+          tooltipText.removeChild(tooltipText.firstChild);
+        }
+        
+        // Si no hay líneas válidas, crear una línea por defecto
+        if (lines.length === 0) {
+          lines.push('Información no disponible');
+        }
+        
+        // Crear tspan para cada línea
+        lines.forEach((line, index) => {
+          const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+          tspan.setAttribute('x', tooltipX + 8);
+          tspan.setAttribute('y', tooltipY + 18 + (index * 14));
+          tspan.textContent = line.trim() || ' '; // Asegurar que siempre haya contenido
+          tooltipText.appendChild(tspan);
+        });
+        
+        tooltipBg.setAttribute('x', tooltipX);
+        tooltipBg.setAttribute('y', tooltipY);
         tooltipBg.setAttribute('width', textWidth);
         tooltipBg.setAttribute('height', textHeight);
         tooltipBg.setAttribute('visibility', 'visible');
+        
+        // Hacer visible el texto del tooltip
+        tooltipText.setAttribute('visibility', 'visible');
       });
       
       L.addEventListener('mouseleave', function() {
@@ -1682,12 +1793,138 @@ function draw(instOpt){
         tooltipBg.setAttribute('visibility', 'hidden');
       });
       
-      // Agregar elementos al SVG
+      // Agregar elementos al SVG (al final para que aparezcan encima)
       svg.appendChild(tooltipBg);
       svg.appendChild(tooltipText);
     }
     
     svg.appendChild(L); return L;
+  }
+
+  // Función para dibujar indicador de centro de masa (estilo similar al CM general)
+  function drawCenterIndicator(x, y, color, scale = 600, componentName = '', localCoords = null) {
+    if (isNaN(x) || isNaN(y)) {
+      console.warn('drawCenterIndicator recibió coordenadas NaN:', { x, y });
+      return;
+    }
+
+    // Círculo de fondo
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', x);
+    circle.setAttribute('cy', y);
+    circle.setAttribute('r', Math.max(3, 6 * (scale / 600))); // Radio más pequeño que el CM general
+    circle.setAttribute('fill', color);
+    circle.setAttribute('stroke', '#000');
+    circle.setAttribute('stroke-width', Math.max(0.5, 1 * (scale / 600)));
+    circle.setAttribute('opacity', '0.7');
+    circle.style.cursor = 'pointer'; // Cambiar cursor al pasar el mouse
+
+    // Crear tooltip para coordenadas globales
+    const tooltipText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    tooltipText.setAttribute('x', '0');
+    tooltipText.setAttribute('y', '0');
+    tooltipText.setAttribute('font-size', '11');
+    tooltipText.setAttribute('fill', '#000'); // Cambiar a negro para mejor visibilidad
+    tooltipText.setAttribute('font-weight', 'bold');
+    tooltipText.setAttribute('visibility', 'hidden');
+    tooltipText.setAttribute('pointer-events', 'none');
+
+    // Crear rectángulo de fondo para el tooltip
+    const tooltipBg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    tooltipBg.setAttribute('x', '0');
+    tooltipBg.setAttribute('y', '0');
+    tooltipBg.setAttribute('width', '0');
+    tooltipBg.setAttribute('height', '0');
+    tooltipBg.setAttribute('fill', '#ffffff'); // Fondo blanco
+    tooltipBg.setAttribute('stroke', '#000');
+    tooltipBg.setAttribute('stroke-width', '1');
+    tooltipBg.setAttribute('rx', '4');
+    tooltipBg.setAttribute('visibility', 'hidden');
+    tooltipBg.setAttribute('pointer-events', 'none');
+
+    // Crear líneas de texto usando tspan para mejor control
+    const lines = [
+      componentName,
+      `Global: (${x.toFixed(1)}, ${y.toFixed(1)})`,
+      'Sistema W: Y=0 en nivel del agua',
+      ...(localCoords ? ['Y > 0: arriba del agua', 'Y < 0: abajo del agua'] : [])
+    ];
+
+    // Eventos de mouse
+    circle.addEventListener('mouseenter', function(e) {
+      const mouseX = e.clientX - svg.getBoundingClientRect().left;
+      const mouseY = e.clientY - svg.getBoundingClientRect().top;
+
+      // Calcular tamaño del texto para el fondo (más grande y con padding)
+      const tooltipLines = lines;
+      const maxLineLength = Math.max(...tooltipLines.map(line => line.length));
+      const textWidth = maxLineLength * 6 + 20; // Menos ancho para recuadro más estrecho
+      const lineHeight = 16; // Altura consistente por línea
+      const textHeight = tooltipLines.length * lineHeight + 20; // Más alto para mejor espaciado de varias líneas
+
+      // Posicionar tooltip arriba y a la derecha del mouse
+      const tooltipX = mouseX + 20;
+      const tooltipY = mouseY - textHeight - 15;
+
+      // Limpiar tspan anteriores
+      while (tooltipText.firstChild) {
+        tooltipText.removeChild(tooltipText.firstChild);
+      }
+
+      // Crear tspan para cada línea con posicionamiento consistente
+      lines.forEach((line, index) => {
+        const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+        tspan.setAttribute('x', tooltipX + 10);
+        tspan.setAttribute('y', tooltipY + 20 + (index * lineHeight)); // Posicionamiento absoluto
+        tspan.textContent = line;
+        tooltipText.appendChild(tspan);
+      });
+
+      tooltipBg.setAttribute('x', tooltipX);
+      tooltipBg.setAttribute('y', tooltipY);
+      tooltipBg.setAttribute('width', textWidth);
+      tooltipBg.setAttribute('height', textHeight);
+      tooltipBg.setAttribute('visibility', 'visible');
+
+      // El texto ya está posicionado en los tspan
+      tooltipText.setAttribute('visibility', 'visible');
+    });
+
+    circle.addEventListener('mouseleave', function() {
+      tooltipText.setAttribute('visibility', 'hidden');
+      tooltipBg.setAttribute('visibility', 'hidden');
+    });
+
+    // Agregar elementos al SVG
+    svg.appendChild(tooltipBg);
+    svg.appendChild(tooltipText);
+    svg.appendChild(circle);
+
+    // Cruz blanca para marcar el centro exacto
+    const crossSize = Math.max(2, 4 * (scale / 600));
+    const cross = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+
+    // Línea horizontal
+    const hLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    hLine.setAttribute('x1', x - crossSize);
+    hLine.setAttribute('y1', y);
+    hLine.setAttribute('x2', x + crossSize);
+    hLine.setAttribute('y2', y);
+    hLine.setAttribute('stroke', '#fff');
+    hLine.setAttribute('stroke-width', Math.max(0.5, 1 * (scale / 600)));
+    cross.appendChild(hLine);
+
+    // Línea vertical
+    const vLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    vLine.setAttribute('x1', x);
+    vLine.setAttribute('y1', y - crossSize);
+    vLine.setAttribute('x2', x);
+    vLine.setAttribute('y2', y + crossSize);
+    vLine.setAttribute('stroke', '#fff');
+    vLine.setAttribute('stroke-width', Math.max(0.5, 1 * (scale / 600)));
+    cross.appendChild(vLine);
+
+    svg.appendChild(cross);
   }
 
   // Superficie del agua (visual)
@@ -1803,6 +2040,7 @@ function draw(instOpt){
     foilTitle.textContent = `Foil Principal
 Tamaño: ${p.foilChord?.toFixed(3) || 0.25} m × ${(p.S / p.foilChord)?.toFixed(3) || 0.6} m
 Posición: X=${foilX_physical?.toFixed(3)} m, Y=0 m, Z=${foilZ_physical?.toFixed(3)} m
+Sistema de coordenadas: F (foil local) - centrado en el foil
 Área: ${(p.S || 0.15)?.toFixed(3)} m²`;
     foilRect.appendChild(foilTitle);
     
@@ -1848,6 +2086,7 @@ Posición: X=${foilX_physical?.toFixed(3)} m, Y=0 m, Z=${foilZ_physical?.toFixed
   boardTitle.textContent = `Tabla
 Tamaño: ${(p.boardLen || 1.4)?.toFixed(3)} m × ${(p.boardArea / p.boardLen)?.toFixed(3) || 0.4} m
 Posición: X=${((xAnchor - wpx*0.50) / p.vscale)?.toFixed(3)} m, Y=0 m, Z=${((hpx*0.62 - yAnchor) / p.vscale)?.toFixed(3)} m
+Sistema de coordenadas: F (foil local) - centrado en el foil
 Área: ${(p.boardArea || 0.4)?.toFixed(3)} m²
 Volumen: ${(p.boardVolL / 1000)?.toFixed(3) || 0.04} m³`;
   poly.appendChild(boardTitle);
@@ -1981,21 +2220,51 @@ Volumen: ${(p.boardVolL / 1000)?.toFixed(3) || 0.04} m³`;
     }
   }
 
-  // Ejes W (global fijo) y B (popa, solidario a tabla)
+  // Ejes W (global fijo), B (popa, solidario a tabla) y F (foil local)
   if(p.show.axesW){
-    const xg = 34 + pan.x, yg = horizonY - 40;
-    arrow2(xg,yg, xg+28, yg, '#000',1.6, 'Eje X global (horizontal)\nSistema de coordenadas fijo del mundo'); text(xg+32, yg+4, 'x');
-    arrow2(xg,yg, xg, yg-28, '#000',1.6, 'Eje Y global (vertical)\nSistema de coordenadas fijo del mundo'); text(xg-8,  yg-30,'y');
+    const xg = 34 + pan.x, yg = horizonY;  // Origen exactamente en el nivel del agua
+    arrow2(xg,yg, xg+28, yg, '#000',1.6, `Eje X global (horizontal)\nSistema de coordenadas fijo del mundo\nY=0 en el nivel del agua\nPositivo = hacia adelante, Negativo = hacia atrás\nOrigen W: (0.0, 0.0)`); text(xg+32, yg+4, 'x');
+    arrow2(xg,yg, xg, yg-28, '#000',1.6, `Eje Y global (vertical)\nSistema de coordenadas fijo del mundo\nPositivo = arriba del agua, Negativo = abajo del agua\nOrigen W: (0.0, 0.0)`); text(xg-8,  yg-30,'y');
     const cW=document.createElementNS('http://www.w3.org/2000/svg','circle'); cW.setAttribute('cx',xg); cW.setAttribute('cy',yg); cW.setAttribute('r','3'); cW.setAttribute('fill','#000'); svg.appendChild(cW);
-    text(xg-12, yg-8, 'W(0,0)');
+    text(xg-12, yg+15, 'W(0,0)');
   }
   if(p.show.axesB){
     const sternX = xAnchor - (Lb/2)*tHat[0];
     const sternY = yAnchor - (Lb/2)*tHat[1];
-    arrow2(sternX,sternY, sternX+32*tHat[0], sternY+32*tHat[1], '#000',1.6, 'Eje X local de la tabla (tangencial)\nSistema de coordenadas solidario a la tabla'); text(sternX+32*tHat[0]+4, sternY+32*tHat[1]+4, 'x_b');
-    arrow2(sternX,sternY, sternX+32*nHat[0], sternY+32*nHat[1], '#000',1.6, 'Eje Y local de la tabla (normal)\nSistema de coordenadas solidario a la tabla'); text(sternX+32*nHat[0]+4, sternY+32*nHat[1]+4, 'y_b');
+    // Calcular coordenadas físicas globales del origen B (popa de la tabla)
+    const sternGlobal = localToGlobal(0, 0, phi, p.mastH, p.hscale, p.vscale, cx, cy);
+    arrow2(sternX,sternY, sternX+32*tHat[0], sternY+32*tHat[1], '#000',1.6, `Eje X local de la tabla (tangencial)\nSistema de coordenadas solidario a la tabla\nOrigen B: (${sternGlobal.globalX.toFixed(1)}, ${sternGlobal.globalY.toFixed(1)})`); text(sternX+32*tHat[0]+4, sternY+32*tHat[1]+4, 'x_b');
+    arrow2(sternX,sternY, sternX+32*nHat[0], sternY+32*nHat[1], '#000',1.6, `Eje Y local de la tabla (normal)\nSistema de coordenadas solidario a la tabla\nOrigen B: (${sternGlobal.globalX.toFixed(1)}, ${sternGlobal.globalY.toFixed(1)})`); text(sternX+32*nHat[0]+4, sternY+32*nHat[1]+4, 'y_b');
     const cB=document.createElementNS('http://www.w3.org/2000/svg','circle'); cB.setAttribute('cx',sternX); cB.setAttribute('cy',sternY); cB.setAttribute('r','3'); cB.setAttribute('fill','#000'); svg.appendChild(cB);
     text(sternX-14, sternY-8, 'B(0,0)');
+  }
+
+  // Ejes F (foil local) - Sistema de coordenadas local del foil
+  if(p.show.axesW || p.show.axesB){  // Solo mostrar si se muestran otros ejes
+    const foilOriginX = xAnchor;  // Centro horizontal del foil
+    const foilOriginY = hpx * 0.62;  // Línea de referencia Z (cerca de la línea de flotación)
+    
+    // Calcular coordenadas físicas globales del origen F (centro del foil)
+    const foilGlobal = localToGlobal(p.foilOffsetX || 0.3, p.foilOffsetZ || 0.05, phi, p.mastH, p.hscale, p.vscale, cx, cy);
+
+    // Eje X local del foil (horizontal, distancia desde el centro del foil)
+    arrow2(foilOriginX, foilOriginY, foilOriginX + 32, foilOriginY, '#228B22', 1.6,
+           `Eje X local del foil (horizontal)\nSistema de coordenadas centrado en el foil\nX = distancia horizontal desde el centro del foil\nOrigen F: (${foilGlobal.globalX.toFixed(1)}, ${foilGlobal.globalY.toFixed(1)})`);
+    text(foilOriginX + 36, foilOriginY + 4, 'x_f');
+
+    // Eje Z local del foil (vertical, profundidad/altura)
+    arrow2(foilOriginX, foilOriginY, foilOriginX, foilOriginY - 32, '#228B22', 1.6,
+           `Eje Z local del foil (vertical)\nSistema de coordenadas centrado en el foil\nZ = profundidad/altura relativa al foil\nOrigen F: (${foilGlobal.globalX.toFixed(1)}, ${foilGlobal.globalY.toFixed(1)})`);
+    text(foilOriginX - 8, foilOriginY - 36, 'z_f');
+
+    // Punto de origen del sistema F
+    const cF = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    cF.setAttribute('cx', foilOriginX);
+    cF.setAttribute('cy', foilOriginY);
+    cF.setAttribute('r', '3');
+    cF.setAttribute('fill', '#228B22');
+    svg.appendChild(cF);
+    text(foilOriginX - 20, foilOriginY - 8, 'F(0,0)');
   }
 
   // Vectores flujo y cuerda
@@ -2085,13 +2354,13 @@ Volumen: ${(p.boardVolL / 1000)?.toFixed(3) || 0.04} m³`;
     const tailTitle = document.createElementNS('http://www.w3.org/2000/svg', 'title');
     tailTitle.textContent = `Cola del Foil
 Tamaño: ${p.tailChord?.toFixed(3) || 0.15} m × ${(p.tailArea / p.tailChord)?.toFixed(3) || 0.17} m
-Posición: X=${((tailCx - wpx*0.50) / p.vscale)?.toFixed(3)} m, Y=0 m, Z=${((hpx*0.62 - tailCy) / p.vscale)?.toFixed(3)} m
-Área: ${(p.tailArea || 0.025)?.toFixed(3)} m²`;
+Centro de rotación: X=${((tailCx - wpx*0.50) / p.vscale)?.toFixed(3)} m, Y=0 m, Z=${((hpx*0.62 - tailCy) / p.vscale)?.toFixed(3)} m
+Sistema de coordenadas: F (foil local) - centrado en el foil`;
     tailRect.appendChild(tailTitle);
     
     svg.appendChild(tailRect);
 
-    // Círculo en el centro geométrico de la cola
+    // Círculo en el centro de rotación de la cola
     const tailCenterCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
     tailCenterCircle.setAttribute('cx', tailCx);
     tailCenterCircle.setAttribute('cy', tailCy);
@@ -2172,12 +2441,9 @@ Posición: X=${((tailCx - wpx*0.50) / p.vscale)?.toFixed(3)} m, Y=0 m, Z=${((hpx
 
   // Pesos individuales de componentes
   if(p.show.componentWeights){
-    console.log('DIBUJANDO PESOS DE COMPONENTES');
     const phi_local = (p.phi0 || 0) * Math.PI / 180;
     const g = 9.81; // Aceleración de la gravedad
     const k = (40/(getTotalMass(p)*9.81)) * (p.fuerzascale || 1); // Factor de escala para vectores
-    console.log('Factor de escala k:', k, 'Total mass:', getTotalMass(p));
-    console.log('Pesos calculados - Tabla:', boardWeight, 'Foil:', foilWeight, 'Cola:', tailWeight);
 
     // Validar coordenadas base
     if (isNaN(cx) || isNaN(cy)) {
@@ -2187,55 +2453,46 @@ Posición: X=${((tailCx - wpx*0.50) / p.vscale)?.toFixed(3)} m, Y=0 m, Z=${((hpx
 
     // Centro de la tabla
     const boardWeight = (p.boardMass || 5.5) * g;
+    const boardArrowLength = Math.max(12, Math.abs(k * boardWeight));
     const boardScreen = { screenX: cx, screenY: cy };
-    console.log('Centro tabla:', 'x:', boardScreen.screenX, 'y:', boardScreen.screenY, 'Peso:', boardWeight);
-    console.log('¿Visible en viewport?', boardScreen.screenX >= 0 && boardScreen.screenX <= wpx && boardScreen.screenY >= 0 && boardScreen.screenY <= hpx);
     if (!isNaN(boardScreen.screenX) && !isNaN(boardScreen.screenY)) {
-      const arrowLength = Math.max(8, k * boardWeight);
-      console.log('Longitud flecha tabla:', arrowLength, '(min 8)');
-      console.log('Dibujando flecha tabla:', 'x1:', boardScreen.screenX, 'y1:', boardScreen.screenY, 'x2:', boardScreen.screenX, 'y2:', boardScreen.screenY + arrowLength);
       arrow2(boardScreen.screenX, boardScreen.screenY,
-             boardScreen.screenX, boardScreen.screenY + arrowLength,
+             boardScreen.screenX, boardScreen.screenY + boardArrowLength,
              '#8B4513', 2.0,
              `Peso tabla: ${boardWeight.toFixed(1)} N\nMasa: ${(p.boardMass || 5.5).toFixed(1)} kg`);
+      // Dibujar indicador de centro de masa de la tabla (estilo similar al CM general)
+      drawCenterIndicator(cx, cy, '#8B4513', scale, 'Centro Tabla', {x: 0, z: 0});
     }
 
     // Centro del foil
     const foilWeight = (p.foilMass || 2.0) * g;
-    const foilScreen = localToGlobal(p.foilOffsetX || 0.3, p.foilOffsetZ || 0.05, phi_local, p.mastH || 0.8, p.hscale || 80, p.vscale || 300, cx, cy);
-    console.log('Centro foil:', 'x:', foilScreen.x, 'y:', foilScreen.y, 'Peso:', foilWeight);
-    console.log('¿Visible en viewport?', foilScreen.x >= 0 && foilScreen.x <= wpx && foilScreen.y >= 0 && foilScreen.y <= hpx);
-    if (!isNaN(foilScreen.x) && !isNaN(foilScreen.y)) {
-      const arrowLength = Math.max(8, k * foilWeight);
-      console.log('Longitud flecha foil:', arrowLength, '(min 8)');
-      console.log('Dibujando flecha foil:', 'x1:', foilScreen.x, 'y1:', foilScreen.y, 'x2:', foilScreen.x, 'y2:', foilScreen.y + arrowLength);
-      arrow2(foilScreen.x, foilScreen.y,
-             foilScreen.x, foilScreen.y + arrowLength,
+    const foilArrowLength = Math.max(12, Math.abs(k * foilWeight));
+    const foilLocal = {x: p.foilOffsetX || 0.3, z: p.foilOffsetZ || 0.05};
+    if (!isNaN(foilGlobal.x) && !isNaN(foilGlobal.y)) {
+      arrow2(foilGlobal.x, foilGlobal.y,
+             foilGlobal.x, foilGlobal.y + foilArrowLength,
              '#4169E1', 2.0,
              `Peso foil: ${foilWeight.toFixed(1)} N\nMasa: ${(p.foilMass || 2.0).toFixed(1)} kg`);
+      // Dibujar indicador de centro de masa del foil
+      drawCenterIndicator(foilGlobal.x, foilGlobal.y, '#4169E1', scale, 'Centro Foil', foilLocal);
     }
 
-    // Centro de la cola
+    // Centro de rotación de la cola
     const tailWeight = (p.tailMass || 0.5) * g;
-    const tailScreen = localToGlobal(
-      (p.foilOffsetX || 0.3) + (p.tailOffsetX || 0.6),
-      (p.foilOffsetZ || 0.05) + (p.tailOffsetZ || 0.02),
-      phi_local, p.mastH || 0.8, p.hscale || 80, p.vscale || 300, cx, cy
-    );
-    console.log('Centro cola:', 'x:', tailScreen.x, 'y:', tailScreen.y, 'Peso:', tailWeight);
-    console.log('¿Visible en viewport?', tailScreen.x >= 0 && tailScreen.x <= wpx && tailScreen.y >= 0 && tailScreen.y <= hpx);
-    if (!isNaN(tailScreen.x) && !isNaN(tailScreen.y)) {
-      const arrowLength = Math.max(8, k * tailWeight);
-      console.log('Longitud flecha cola:', arrowLength, '(min 8)');
-      console.log('Dibujando flecha cola:', 'x1:', tailScreen.x, 'y1:', tailScreen.y, 'x2:', tailScreen.x, 'y2:', tailScreen.y + arrowLength);
-      arrow2(tailScreen.x, tailScreen.y,
-             tailScreen.x, tailScreen.y + arrowLength,
+    const tailArrowLength = Math.max(12, Math.abs(k * tailWeight));
+    const tailLocal = {
+      x: (p.foilOffsetX || 0.3) + (p.tailOffsetX || 0.6),
+      z: (p.foilOffsetZ || 0.05) + (p.tailOffsetZ || 0.02)
+    };
+    const tailScreen = localToGlobal(tailLocal.x, tailLocal.z, phi_local, p.mastH || 0.8, p.hscale || 80, p.vscale || 300, cx, cy);
+    if (!isNaN(tailScreen.globalX) && !isNaN(tailScreen.globalY)) {
+      arrow2(tailScreen.globalX, tailScreen.globalY,
+             tailScreen.globalX, tailScreen.globalY + tailArrowLength,
              '#228B22', 2.0,
              `Peso cola: ${tailWeight.toFixed(1)} N\nMasa: ${(p.tailMass || 0.5).toFixed(1)} kg`);
+      // Dibujar indicador de centro de rotación de la cola
+      drawCenterIndicator(tailScreen.globalX, tailScreen.globalY, '#228B22', scale, 'Centro Rotación Cola', tailLocal);
     }
-    
-    console.log('Total de elementos en SVG después de pesos:', svg.children.length);
-    console.log('Últimos elementos agregados:', Array.from(svg.children).slice(-3).map(el => el.tagName + (el.getAttribute('stroke') ? `(${el.getAttribute('stroke')})` : '')));
   }
 
   // Dibujar geometría del sistema (centro de masa, posiciones relativas)
@@ -2244,14 +2501,10 @@ Posición: X=${((tailCx - wpx*0.50) / p.vscale)?.toFixed(3)} m, Y=0 m, Z=${((hpx
     console.log('Elementos en SVG antes de geometría:', svg.children.length);
     console.log('Llamando drawSystemGeometry con:', { p, scale, cx, cy });
     drawSystemGeometry(svg, p, scale, cx, cy);
-    console.log('Elementos en SVG después de geometría:', svg.children.length);
-    console.log('Últimos elementos agregados:', Array.from(svg.children).slice(-3).map(el => el.tagName + (el.getAttribute('stroke') ? `(${el.getAttribute('stroke')})` : '')));
+    console.log('Total de elementos en SVG después de geometría:', svg.children.length);
   }
 
   refreshCharts();
-  console.log('=== FIN DEL DIBUJO ===');
-  console.log('Elementos totales en SVG:', svg.children.length);
-  console.log('Últimos 5 elementos:', Array.from(svg.children).slice(-5).map(el => el.tagName + (el.getAttribute('stroke') ? `(${el.getAttribute('stroke')})` : '')));
   } catch (error) {
     console.error('Error en función draw():', error);
     // No relanzar el error para evitar loops infinitos
